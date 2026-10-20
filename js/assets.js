@@ -83,7 +83,7 @@ export function drawClip(ctx, clip, frame, x, footY, facing, opts = {}) {
     if (!clip.char) return false;
     const frame0 = Math.max(0, Math.min(clip.frames - 1, frame | 0));
     if (clip.name === 'orb' || clip.name === 'chicken') drawPlaceholderProjectile(ctx, clip.name, frame0, x, footY, facing);
-    else drawPlaceholderFighter(ctx, clip.char, clip.name, frame0, clip.frames, x, footY, facing, { alpha: opts.alpha, filter: opts.filter });
+    else drawPlaceholderFighter(ctx, clip.char, clip.name, frame0, clip.frames, x, footY, facing, { alpha: opts.alpha, filter: opts.filter, state: opts.state });
     return true;
   }
   const f = Math.max(0, Math.min(clip.frames - 1, frame | 0));

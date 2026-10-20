@@ -554,7 +554,7 @@ export class Match {
     if (f.flash > 0) filter = 'brightness(1.9) saturate(0.6)';
     if (f.state === 'getup' && this.clock % 4 < 2) alpha = 0.6;
     if (f.state === 'attack' && f.move?.invuln && f.invuln > 0) filter = 'drop-shadow(0 0 14px rgba(255,220,120,.95))';
-    drawClip(ctx, clip, a.frame, f.x, f.y, f.facing, { filter, alpha });
+    drawClip(ctx, clip, a.frame, f.x, f.y, f.facing, { filter, alpha, state: f.state });
     // sound-wave rings in front of the singer
     if (f.state === 'attack' && f.move?.wave && f.mt >= f.move.startup && f.mt < f.move.startup + f.move.active) {
       const k = (f.mt - f.move.startup) / f.move.active;
