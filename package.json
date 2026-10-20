@@ -1,0 +1,13 @@
+{
+  "name": "yellow-brawl",
+  "version": "0.3.0",
+  "private": true,
+  "type": "module",
+  "description": "2D browser fighting game with local and online play",
+  "scripts": {
+    "start": "node server/server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

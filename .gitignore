@@ -1,0 +1,6 @@
+# sprite sheets are kept local only
+assets/
+node_modules/
+.DS_Store
+.claude/
+*.log

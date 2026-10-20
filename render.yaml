@@ -1,0 +1,8 @@
+services:
+  - type: web
+    name: yellow-brawl
+    runtime: node
+    plan: free
+    buildCommand: echo "no build step"
+    startCommand: npm start
+    healthCheckPath: /
