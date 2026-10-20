@@ -3,6 +3,8 @@
 A 2D browser fighting game with local and online multiplayer: plain JavaScript modules + one `<canvas>`,
 no build step, no dependencies. A zero-dependency Node server handles the online lobby.
 
+**Play it:** https://yellow-brawl.onrender.com (free hosting: the first load after a quiet period can take ~30–50 s while the server wakes up)
+
 ## Run
 
 ```bash

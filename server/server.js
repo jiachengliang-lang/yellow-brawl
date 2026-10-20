@@ -58,6 +58,7 @@ class Socket {
     this.open = true;
     this.onmessage = null;
     this.onclose = null;
+    this.lastFrame = Date.now();
     sock.setNoDelay(true);
     sock.on('data', (d) => this.receive(d));
     sock.on('close', () => this.closed());
@@ -81,6 +82,7 @@ class Socket {
       const data = Buffer.from(this.buf.subarray(off + 4, off + 4 + len));
       for (let i = 0; i < data.length; i++) data[i] ^= mask[i & 3];
       this.buf = this.buf.subarray(off + 4 + len);
+      this.lastFrame = Date.now();       // any frame, including pongs, proves the peer is alive
 
       if (op === 0x8) return this.close(1000);
       if (op === 0x9) { this.frame(0xA, data); continue; }
@@ -152,12 +154,11 @@ function newCode() {
 }
 
 function connect(ws) {
-  const c = { id: nextId++, ws, name: `Player${Math.floor(Math.random() * 900 + 100)}`, room: null, lastSeen: Date.now() };
+  const c = { id: nextId++, ws, name: `Player${Math.floor(Math.random() * 900 + 100)}`, room: null };
   clients.set(c.id, c);
   ws.send({ type: 'welcome', id: c.id });
   broadcastCount();
   ws.onmessage = (raw) => {
-    c.lastSeen = Date.now();
     let msg;
     try { msg = JSON.parse(raw); } catch { return; }
     try { handle(c, msg, raw); } catch (err) { console.error('[handle]', err); }
@@ -301,11 +302,15 @@ function handle(c, msg, raw) {
   }
 }
 
-/* drop silent connections */
+/* Heartbeat: ping every client; drop any that stay silent.
+ * Needed behind hosting proxies, which may keep the upstream socket open after a tab closes. */
 setInterval(() => {
   const now = Date.now();
-  for (const c of clients.values()) if (now - c.lastSeen > 30000) c.ws.close(1001);
-}, 10000);
+  for (const c of clients.values()) {
+    if (now - c.ws.lastFrame > 10000) c.ws.close(1001);
+    else c.ws.frame(0x9, Buffer.alloc(0));
+  }
+}, 3000);
 
 /* ------------------------------------------------------------------ start */
 const server = http.createServer(serveStatic);
