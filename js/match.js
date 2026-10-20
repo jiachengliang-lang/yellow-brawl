@@ -6,6 +6,7 @@ import { CpuController } from './ai.js';
 import { readPlayer, blank, BUTTONS } from './input.js';
 import { drawClip, getImage } from './assets.js';
 import { drawCarton } from './placeholder.js';
+import { drawAmbient, drawShadow, drawSuperBackdrop, drawVignette, drawKoFx, drawIntroVs, drawBanner, drawHud } from './presentation.js';
 import { drawStage, W, H, GROUND } from './stage.js';
 import { settings } from './settings.js';
 import { Effects } from './fx.js';
@@ -59,7 +60,7 @@ export class Match {
     this.events = [];
     this.lastMask = -1;
     if (this.online?.role === 'host') {
-      for (const m of ['hitSpark', 'blockSpark', 'dust', 'superAura']) {
+      for (const m of ['hitSpark', 'blockSpark', 'dust', 'superAura', 'float']) {
         const orig = this.fx[m].bind(this.fx);
         this.fx[m] = (...args) => { this.events.push(['f', m, args]); orig(...args); };
       }
@@ -111,6 +112,7 @@ export class Match {
       hs: this.hitstop, fz: this.freeze, fw: this.freezeWho ? this.freezeWho.side : -1, sn: this.superName,
       sh: this.shake, sl: this.slow, sf: this.screenFlash, zm: this.zoom, an: this.announce, cb: this.combo,
       w: this.winner, q: this.quotes, rt: this.roundTime, wn: this.winsNeeded,
+      kk: this.koKind, kc: this.koClock, sb: this.shakeBias,
       f: this.fighters.map(f => Object.fromEntries(F.map(k => [k, f[k]]))),
       p: this.projectiles.map(p => ({ k: p.kind, o: p.owner.side, x: p.x, y: p.y, vx: p.vx, vy: p.vy, t: p.t, s: p.spin })),
       ev: this.events
@@ -131,6 +133,7 @@ export class Match {
     this.superName = d.sn; this.shake = d.sh; this.slow = d.sl; this.screenFlash = d.sf;
     this.zoom = d.zm; this.announce = d.an; this.combo = d.cb; this.winner = d.w; this.quotes = d.q;
     this.roundTime = d.rt; this.winsNeeded = d.wn;
+    this.koKind = d.kk; this.koClock = d.kc; this.shakeBias = d.sb || 0;
     d.f.forEach((src, i) => {
       const f = this.fighters[i];
       Object.assign(f, src);
@@ -178,6 +181,8 @@ export class Match {
     this.timer = this.roundTime || Infinity;
     this.screenFlash = 0;
     this.zoom = null;
+    this.shakeBias = 0;
+    this.koKind = null; this.koClock = null;
     this.timerFrames = 0;
     this.combo = [null, null];
     this.announce = null;
@@ -192,7 +197,7 @@ export class Match {
   }
 
   say(text, opts = {}) {
-    this.announce = { text, sub: opts.sub || '', t: 0, dur: opts.dur || 70, color: opts.color || '#ffd84a' };
+    this.announce = { text, sub: opts.sub || '', t: 0, dur: opts.dur || 70, style: opts.style || 'round' };
   }
 
   /* ------------------------------------------------------------ simulation */
@@ -242,16 +247,18 @@ export class Match {
     if (this.training) return;
     this.phaseT++;
     if (this.phase === 'intro') {
-      const q = this.round === 1 ? 110 : 0;      // round 1 opens with each fighter's line
-      if (q && this.phaseT === 5) this.quotes = [{ side: 0, t: 0 }, { side: 1, t: -40 }];
-      if (this.phaseT === q + 30) {
+      // round 1: VS panels (0–80), each fighter's line, then ROUND / FIGHT
+      const q = this.round === 1 ? 165 : 0;
+      if (this.round === 1 && this.phaseT === 8) sfx('fight');
+      if (q && this.phaseT === 82) this.quotes = [{ side: 0, t: 0 }, { side: 1, t: -30 }];
+      if (this.phaseT === q + 10) {
         const need = this.winsNeeded;
         const final = this.round === MAX_ROUNDS || (need > 1 && a.wins === need - 1 && b.wins === need - 1);
-        this.say(final ? t('finalRound') : t('round', { n: this.round }), { dur: 60 });
+        this.say(final ? t('finalRound') : t('round', { n: this.round }), { dur: 62, style: final ? 'final' : 'round', sub: final ? '' : `${this.nameOf(0)}  VS  ${this.nameOf(1)}` });
         sfx('round');
       }
-      if (this.phaseT === q + 95) { this.say(t('fight'), { dur: 40, color: '#ff6a3d' }); sfx('fight'); a.toNeutral(); b.toNeutral(); this.quotes = null; }
-      if (this.phaseT >= q + 100) { this.phase = 'fight'; this.phaseT = 0; }
+      if (this.phaseT === q + 72) { this.say(t('fight'), { dur: 42, style: 'fight' }); sfx('fight'); a.toNeutral(); b.toNeutral(); this.quotes = null; }
+      if (this.phaseT >= q + 76) { this.phase = 'fight'; this.phaseT = 0; }
     } else if (this.phase === 'fight') {
       if (this.roundTime && ++this.timerFrames >= 60) {
         this.timerFrames = 0;
@@ -266,10 +273,10 @@ export class Match {
         if (this.winner != null) {
           const w = this.fighters[this.winner];
           w.vx = 0; w.setState('win');
-          this.say(t('wins', { name: this.nameOf(this.winner) }), { dur: 120, sub: this.perfect ? t('perfect') : '' });
+          this.say(t('wins', { name: this.nameOf(this.winner) }), { dur: 120, style: 'win', sub: this.perfect ? t('perfect') : '' });
           sfx('win');
         } else {
-          this.say(t('draw'), { dur: 120 });
+          this.say(t('draw'), { dur: 120, style: 'time' });
         }
         this.phaseT = 100;
       }
@@ -287,7 +294,8 @@ export class Match {
     const loser = this.fighters[1 - winnerSide];
     this.zoom = { x: loser.x, y: loser.y - 150, t: 0, dur: 150 };
     this.projectiles = [];
-    this.say(t('ko'), { dur: 90, color: '#ff4040' });
+    this.koKind = 'ko'; this.koClock = this.clock;
+    this.say(t('ko'), { dur: 96, style: 'ko' });
     sfx('ko');
   }
 
@@ -297,7 +305,8 @@ export class Match {
     this.phase = 'ko'; this.phaseT = 40; this.winShown = false; this.perfect = false;
     this.winner = ra === rb ? null : ra > rb ? 0 : 1;
     if (this.winner != null) this.fighters[1 - this.winner].setState('lose');
-    this.say(t('timeOver'), { dur: 70 });
+    this.koKind = 'time'; this.koClock = this.clock;
+    this.say(t('timeOver'), { dur: 70, style: 'time' });
   }
 
   endRound() {
@@ -349,6 +358,8 @@ export class Match {
 
   resolveHit(att, def, d, dir, px, py, opts) {
     const hpBefore = def.hp;
+    // counter hit: the defender was in the middle of their own attack
+    const counter = def.state === 'attack' && def.move && def.mt < def.move.startup + def.move.active;
     const res = def.takeHit(att, d, dir, { ...opts, noKo: this.training || this.phase !== 'fight' });
     if (res === 'block') def.stats.blocks++;
     else {
@@ -363,14 +374,16 @@ export class Match {
       att.meter = Math.min(100, att.meter + d.meter * 0.5);
     } else {
       att.connected = true;
-      const heavy = d.dmg >= 60 || d.knockdown;
-      this.fx.hitSpark(px, py, dir, heavy);
+      const heavy = d.dmg >= 60 || d.knockdown || (opts.final && d.finalKnockdown);
+      this.fx.hitSpark(px, py, dir, heavy, att.c.color);
       sfx(heavy ? 'heavy' : 'light');
-      this.hitstop = Math.max(this.hitstop, d.hitstop);
+      this.hitstop = Math.max(this.hitstop, d.hitstop + (counter ? 3 : 0));
       this.shake = Math.max(this.shake, heavy ? 9 : 3);
+      this.shakeBias = dir * (heavy ? 14 : 6);
+      if (counter && res === 'hit') this.fx.float(px, py - 70, 'COUNTER', '#ff8a3d');
       if (d.knockdown || (opts.final && d.finalKnockdown)) this.screenFlash = Math.max(this.screenFlash, 3);
       att.meter = Math.min(100, att.meter + d.meter * 0.7);
-      this.combo[att.side] = { hits: def.comboTaken, dmg: def.comboDmg, t: 100 };
+      this.combo[att.side] = { hits: def.comboTaken, dmg: def.comboDmg, t: 100, pop: 8 };
     }
     // pinned against the wall: the attacker gets pushed back instead
     if (res !== 'ko' && (def.x <= WALL_L + 4 || def.x >= WALL_R - 4) && !opts.projectile) {
@@ -451,7 +464,7 @@ export class Match {
         f.comboTaken = 0; f.comboDmg = 0;
       }
     }
-    for (const c of this.combo) if (c) c.t--;
+    for (const c of this.combo) if (c) { c.t--; if (c.pop > 0) c.pop--; }
   }
 
   /* ------------------------------------------------------------ training */
@@ -492,8 +505,10 @@ export class Match {
   /* ------------------------------------------------------------ rendering */
   render() {
     const ctx = this.ctx;
-    const sx = this.shake ? (Math.random() - 0.5) * this.shake * 2 : 0;
-    const sy = this.shake ? (Math.random() - 0.5) * this.shake * 1.4 : 0;
+    // camera shake leans in the direction of the last hit
+    const sx = this.shake ? (Math.random() - 0.5) * this.shake * 1.6 + this.shakeBias * (this.shake / 16) : 0;
+    const sy = this.shake ? (Math.random() - 0.5) * this.shake * 1.2 : 0;
+    if (this.shake < 1) this.shakeBias = 0;
     ctx.save();
     ctx.clearRect(0, 0, W, H);
     // KO camera: brief zoom toward the loser
@@ -508,22 +523,15 @@ export class Match {
       const fy = Math.max(H / 2 / z, Math.min(H - H / 2 / z, this.zoom.y));
       ctx.translate(W / 2, H / 2); ctx.scale(z, z); ctx.translate(-fx, -fy);
     }
+    // super freeze: drain colour from the stage so the attacker pops
+    if (this.freeze > 0) ctx.filter = 'saturate(.25) brightness(.5)';
     drawStage(ctx, this.stage, this.clock, sx, sy);
+    ctx.filter = 'none';
     ctx.translate(sx, sy);
+    if (this.freeze > 0) drawSuperBackdrop(ctx, this);
+    else drawAmbient(ctx, this);
 
-    if (this.freeze > 0) {
-      ctx.fillStyle = 'rgba(10,0,20,.62)';
-      ctx.fillRect(-20, -20, W + 40, H + 40);
-    }
-
-    // shadows
-    for (const f of this.fighters) {
-      const lift = Math.max(0, GROUND - f.y);
-      const s = Math.max(0.4, 1 - lift / 400);
-      ctx.fillStyle = `rgba(0,0,0,${0.38 * s})`;
-      ctx.beginPath(); ctx.ellipse(f.x, GROUND + 4, 78 * s, 14 * s, 0, 0, Math.PI * 2); ctx.fill();
-    }
-
+    for (const f of this.fighters) drawShadow(ctx, f);
     // the attacking fighter is drawn on top
     const order = [...this.fighters].sort((a, b) => (a.state === 'attack') - (b.state === 'attack'));
     for (const f of order) this.drawTrail(ctx, f);
@@ -534,15 +542,18 @@ export class Match {
     if (this.showBoxes) this.drawBoxes(ctx);
     ctx.restore();
 
+    drawVignette(ctx);
     if (this.screenFlash > 0) {
       ctx.fillStyle = `rgba(255,255,255,${this.screenFlash / 10})`;
       ctx.fillRect(0, 0, W, H);
       if (!this.paused) this.screenFlash--;
     }
+    drawKoFx(ctx, this);
     if (this.freeze > 0) this.drawSuperCutIn(ctx);
-    this.drawHud(ctx);
+    if (!(this.phase === 'intro' && this.round === 1 && this.phaseT < 80)) drawHud(ctx, this);
+    drawIntroVs(ctx, this);
     this.drawQuotes(ctx);
-    this.drawAnnouncer(ctx);
+    drawBanner(ctx, this);
   }
 
   drawFighter(ctx, f) {
@@ -554,7 +565,8 @@ export class Match {
     if (f.flash > 0) filter = 'brightness(1.9) saturate(0.6)';
     if (f.state === 'getup' && this.clock % 4 < 2) alpha = 0.6;
     if (f.state === 'attack' && f.move?.invuln && f.invuln > 0) filter = 'drop-shadow(0 0 14px rgba(255,220,120,.95))';
-    drawClip(ctx, clip, a.frame, f.x, f.y, f.facing, { filter, alpha, state: f.state });
+    const jolt = this.hitstop > 0 && f.flash > 0 ? (Math.random() - 0.5) * 9 : 0;
+    drawClip(ctx, clip, a.frame, f.x + jolt, f.y, f.facing, { filter, alpha, state: f.state });
     // sound-wave rings in front of the singer
     if (f.state === 'attack' && f.move?.wave && f.mt >= f.move.startup && f.mt < f.move.startup + f.move.active) {
       const k = (f.mt - f.move.startup) / f.move.active;
@@ -686,140 +698,6 @@ export class Match {
     ctx.strokeText(this.superName, tx, y + 110); ctx.fillText(this.superName, tx, y + 110);
     ctx.font = `800 20px ${FONT}`; ctx.fillStyle = '#3a1500';
     ctx.fillText('SUPER  ·  ' + L(f.c.name), tx, y + 145);
-    ctx.restore();
-  }
-
-  drawHud(ctx) {
-    ctx.save();
-    for (const f of this.fighters) this.drawBar(ctx, f);
-
-    // timer
-    ctx.textAlign = 'center';
-    ctx.fillStyle = 'rgba(10,6,20,.8)';
-    roundRect(ctx, W / 2 - 46, 22, 92, 64, 12); ctx.fill();
-    ctx.strokeStyle = 'rgba(255,215,90,.6)'; ctx.lineWidth = 2; ctx.stroke();
-    ctx.font = `900 44px ${FONT}`;
-    ctx.fillStyle = this.timer <= 10 && !this.training && this.clock % 30 < 15 ? '#ff5a4a' : '#ffe9a6';
-    ctx.fillText(this.training || !this.roundTime ? '∞' : String(Math.max(0, this.timer)).padStart(2, '0'), W / 2, 72);
-
-    // combo counters
-    this.combo.forEach((c, side) => {
-      if (!c || c.t <= 0 || c.hits < 2) return;
-      const a = Math.min(1, c.t / 20);
-      ctx.save();
-      ctx.globalAlpha = a;
-      ctx.textAlign = side === 0 ? 'left' : 'right';
-      const x = side === 0 ? 40 : W - 40;
-      ctx.font = `900 italic 46px ${FONT}`;
-      ctx.lineWidth = 8; ctx.strokeStyle = '#2a0e00'; ctx.fillStyle = '#ffd84a';
-      const txt = t('hits', { n: c.hits });
-      ctx.strokeText(txt, x, 230); ctx.fillText(txt, x, 230);
-      ctx.font = `800 20px ${FONT}`; ctx.fillStyle = '#fff';
-      ctx.strokeText(`${c.dmg} DMG`, x, 258); ctx.fillText(`${c.dmg} DMG`, x, 258);
-      ctx.restore();
-    });
-
-    if (this.training && this.lastCombo) {
-      ctx.textAlign = 'center';
-      ctx.font = `700 18px ${FONT}`;
-      ctx.fillStyle = 'rgba(255,255,255,.85)';
-      ctx.fillText(t('trLastCombo', { hits: this.lastCombo.hits, dmg: this.lastCombo.dmg }), W / 2, 112);
-    }
-    ctx.restore();
-  }
-
-  drawBar(ctx, f) {
-    const left = f.side === 0;
-    const x0 = left ? 120 : W - 120;     // outer end of the bar
-    const len = 440;
-    const dir = left ? 1 : -1;
-    const y = 34, h = 26;
-
-    // portrait
-    const img = getImage(f.c.portrait);
-    const px = left ? 26 : W - 26 - 84;
-    ctx.save();
-    ctx.beginPath(); ctx.arc(px + 42, 52, 42, 0, Math.PI * 2);
-    ctx.fillStyle = '#1b1028'; ctx.fill();
-    ctx.clip();
-    if (img) {
-      if (!left) { ctx.translate(px * 2 + 84, 0); ctx.scale(-1, 1); }
-      ctx.drawImage(img, px, 10, 84, 84);
-    }
-    ctx.restore();
-    ctx.beginPath(); ctx.arc(px + 42, 52, 42, 0, Math.PI * 2);
-    ctx.lineWidth = 3; ctx.strokeStyle = f.c.color; ctx.stroke();
-
-    const bar = (from, to, fill) => {
-      ctx.beginPath();
-      const a = x0 + dir * from, b = x0 + dir * to;
-      ctx.moveTo(a, y); ctx.lineTo(b + dir * 10, y); ctx.lineTo(b, y + h); ctx.lineTo(a, y + h); ctx.closePath();
-      ctx.fillStyle = fill; ctx.fill();
-    };
-    bar(0, len, 'rgba(15,8,24,.85)');
-    const red = (f.redHp / f.c.hp) * len;
-    const hp = (f.hp / f.c.hp) * len;
-    bar(0, red, '#d6283a');
-    const low = f.hp / f.c.hp < 0.3;
-    const g = ctx.createLinearGradient(0, y, 0, y + h);
-    g.addColorStop(0, low && this.clock % 20 < 10 ? '#ff7a5a' : '#fff07a');
-    g.addColorStop(1, low ? '#e8452a' : '#ffb21a');
-    if (hp > 0) bar(0, hp, g);
-    ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,230,160,.7)';
-    ctx.beginPath(); ctx.moveTo(x0, y); ctx.lineTo(x0 + dir * (len + 10), y); ctx.lineTo(x0 + dir * len, y + h); ctx.lineTo(x0, y + h); ctx.closePath(); ctx.stroke();
-
-    // name + round wins
-    ctx.font = `800 20px ${FONT}`;
-    ctx.textAlign = left ? 'left' : 'right';
-    ctx.lineWidth = 5; ctx.strokeStyle = '#120a1c'; ctx.fillStyle = '#fff';
-    const label = this.nameOf(f.side) + (this.cpu[f.side] ? ` · ${t('cpu')}` : '');
-    ctx.strokeText(label, x0, y + h + 26); ctx.fillText(label, x0, y + h + 26);
-    if (!this.training) {
-      for (let i = 0; i < this.winsNeeded; i++) {
-        const cx = x0 + dir * (len - 14 - i * 26);
-        ctx.beginPath(); ctx.arc(cx, y + h + 18, 8, 0, Math.PI * 2);
-        ctx.fillStyle = i < f.wins ? '#ffd84a' : 'rgba(255,255,255,.15)'; ctx.fill();
-        ctx.lineWidth = 2; ctx.strokeStyle = 'rgba(255,220,140,.8)'; ctx.stroke();
-      }
-    }
-
-    // super meter
-    const mx = left ? 40 : W - 40, my = H - 44, ml = 330, mh = 16;
-    ctx.fillStyle = 'rgba(15,8,24,.85)';
-    ctx.fillRect(left ? mx : mx - ml, my, ml, mh);
-    const full = f.meter >= 100;
-    ctx.fillStyle = full ? (this.clock % 16 < 8 ? '#5ef0ff' : '#ffffff') : '#36b8ff';
-    const mw = (f.meter / 100) * ml;
-    ctx.fillRect(left ? mx : mx - mw, my, mw, mh);
-    ctx.strokeStyle = 'rgba(160,230,255,.7)'; ctx.lineWidth = 2;
-    ctx.strokeRect(left ? mx : mx - ml, my, ml, mh);
-    ctx.font = `800 16px ${FONT}`;
-    ctx.textAlign = left ? 'left' : 'right';
-    ctx.fillStyle = full ? '#5ef0ff' : 'rgba(255,255,255,.7)';
-    ctx.fillText(full ? t('superReady') : 'SUPER', mx, my - 8);
-  }
-
-  drawAnnouncer(ctx) {
-    const a = this.announce;
-    if (!a) return;
-    const k = Math.min(1, a.t / 8);
-    const fade = a.t > a.dur - 12 ? (a.dur - a.t) / 12 : 1;
-    ctx.save();
-    ctx.globalAlpha = Math.max(0, fade);
-    ctx.translate(W / 2, H / 2 - 40);
-    ctx.scale(1.6 - 0.6 * k, 1.6 - 0.6 * k);
-    ctx.textAlign = 'center';
-    ctx.font = `900 italic 92px ${FONT}`;
-    ctx.lineWidth = 14; ctx.strokeStyle = '#1a0800';
-    ctx.strokeText(a.text, 0, 0);
-    const g = ctx.createLinearGradient(0, -70, 0, 10);
-    g.addColorStop(0, '#fff8c8'); g.addColorStop(1, a.color);
-    ctx.fillStyle = g; ctx.fillText(a.text, 0, 0);
-    if (a.sub) {
-      ctx.font = `900 40px ${FONT}`;
-      ctx.lineWidth = 8; ctx.strokeText(a.sub, 0, 60);
-      ctx.fillStyle = '#5ef0ff'; ctx.fillText(a.sub, 0, 60);
-    }
     ctx.restore();
   }
 }

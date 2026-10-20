@@ -8,7 +8,8 @@ import { STAGES, STAGE_IDS, stageThumb } from './stage.js';
 import { sfx } from './audio.js';
 import { playMusic } from './music.js';
 import { settings, setSetting } from './settings.js';
-import { t, L, getLang, setLang } from './i18n.js';
+import { t, L, getLang, setLang, TICKER } from './i18n.js';
+import { wipe } from './polish.js';
 import { initOnline, showOnline } from './online.js';
 
 const $ = (s, el = document) => el.querySelector(s);
@@ -37,9 +38,23 @@ const DOWN = ['ArrowDown', 'KeyS'];
 const LEFT = ['ArrowLeft', 'KeyA'];
 const RIGHT = ['ArrowRight', 'KeyD'];
 
+let shownFor = null;
 function show(html, handler = null) {
+  // slatted wipe whenever we move to a different full screen (not overlays or the fight)
+  if (current !== shownFor && /class="screen(?! clear)/.test(html)) wipe();
+  shownFor = current;
   ui.innerHTML = html;
   keyHandler = handler;
+}
+
+function ticker() {
+  const items = TICKER[getLang()];
+  const row = items.map(s => `<span>${s}</span><i>✦</i>`).join('');
+  return `<div class="ticker"><div class="track">${row}${row}</div></div>`;
+}
+
+function logoStack(small = false) {
+  return `<h1 class="logo-stack ${small ? 'small' : ''}"><span class="l1">${t('titleTop')}</span><span class="l2" data-text="${t('titleBottom')}">${t('titleBottom')}</span></h1>`;
 }
 
 /* Vertical menu navigation over [data-nav] elements. */
@@ -98,19 +113,26 @@ async function boot() {
 function showTitle() {
   stopMatch();
   current = showTitle;
-  show(`<div class="screen" id="title">
+  const chips = CHAR_IDS.map(id => `<span class="chip"><i style="background:${CHARACTERS[id].color}"></i>${L(CHARACTERS[id].name)}</span>`).join('<em>VS</em>');
+  show(`<div class="screen title-screen" id="title" data-ghost="斗">
       ${cornerButtons()}
-      <div class="logo">
-        <div class="kicker">MEME FIGHTER</div>
-        <h1>${t('gameTitle')}</h1>
-        <div class="sub">${t('gameSub')}</div>
+      <div class="title-grid">
+        <div class="title-copy">
+          <div class="kicker line">MEME FIGHTER · 2D ARCADE</div>
+          ${logoStack()}
+          <p class="tagline">${t('tagline')}</p>
+          <div class="chips">${chips}</div>
+          <div class="press"><kbd>Enter</kbd><span>${t('pressStart')}</span></div>
+        </div>
+        <div class="title-stage ${usingPlaceholders() ? 'ph' : ''}">
+          <div class="spot" data-depth="6"></div>
+          <img class="st st-l" data-depth="20" src="${CHARACTERS.naiwa.stand}" alt="">
+          <img class="st st-r" data-depth="26" src="${CHARACTERS.kangaroo.stand}" alt="">
+          <img class="st st-m" data-depth="12" src="${CHARACTERS.chick.stand}" alt="">
+          <div class="floor"></div>
+        </div>
       </div>
-      <div class="title-chars ${usingPlaceholders() ? 'ph' : ''}">
-        <img src="${CHARACTERS.naiwa.stand}" alt="">
-        <img src="${CHARACTERS.chick.stand}" alt="" class="mid">
-        <img src="${CHARACTERS.kangaroo.stand}" alt="">
-      </div>
-      <div class="blink">${t('pressStart')}</div>
+      ${ticker()}
       ${usingPlaceholders() ? '' : `<div class="footer">${t('footer')}</div>`}
     </div>`, (e) => { if (!['ShiftLeft', 'ShiftRight'].includes(e.code)) go(); });
   bindCorner();
@@ -132,15 +154,28 @@ function showMenu() {
     ['controls', '05', t('controlsDesc'), () => showControls()],
     ['settings', '06', t('settingsDesc'), () => showSettings(showMenu)]
   ];
-  show(`<div class="screen">
+  // the featured fighter rotates each visit
+  showMenu.n = ((showMenu.n ?? Math.floor(Math.random() * 3)) + 1) % CHAR_IDS.length;
+  const hero = CHARACTERS[CHAR_IDS[showMenu.n]];
+  show(`<div class="screen menu-screen" data-ghost="战">
       ${cornerButtons()}
-      <div class="logo"><div class="kicker">MEME FIGHTER</div><h1 style="font-size:56px;margin:4px 0 0">${t('gameTitle')}</h1></div>
-      <div class="menu compact" style="margin-top:14px">
-        ${items.map(([key, no, desc]) => `<button class="menu-item" data-nav data-key="${key}">
-          <span class="no">${no}</span><span><b>${t(key)}</b><small>${desc}</small></span><span class="arrow">↗</span>
-        </button>`).join('')}
+      <div class="menu-grid">
+        <div class="menu-hero">
+          <div class="kicker line">MEME FIGHTER</div>
+          ${logoStack(true)}
+          <div class="hero-fighter" data-depth="16"><img src="${hero.card}" alt=""></div>
+          <div class="hero-name"><b>${L(hero.name)}</b><span>${L(hero.title)}</span></div>
+        </div>
+        <div class="panel mode-panel">
+          <div class="panel-head"><span class="kicker">SELECT MODE</span><b>${t('selectMode')}</b></div>
+          <div class="menu compact">
+            ${items.map(([key, no, desc], i) => `<button class="menu-item" data-nav data-key="${key}" style="--i:${i}">
+              <span class="no">${no}</span><span><b>${t(key)}</b><small>${desc}</small></span><span class="arrow">↗</span>
+            </button>`).join('')}
+          </div>
+        </div>
       </div>
-      ${usingPlaceholders() ? '' : `<div class="footer">${t('footer')}</div>`}
+      ${ticker()}
     </div>`);
   bindCorner();
   items.forEach(([key, , , fn]) => $(`[data-key="${key}"]`).addEventListener('click', () => { sfx('select'); fn(); }));
@@ -376,12 +411,12 @@ function showVersusSplash() {
   show(`<div class="screen">
       ${ladderHtml()}
       <div style="display:flex;align-items:center;gap:40px">
-        <div class="char-card hover-p1" style="cursor:default"><img src="${a.card}" alt=""><div class="info"><b>${L(a.name)}</b><em>${t('p1')}</em></div></div>
+        <div class="char-card hover-p1 vs-in-l" style="cursor:default"><img src="${a.card}" alt=""><div class="info"><b>${L(a.name)}</b><em>${t('p1')}</em></div></div>
         <div style="text-align:center">
-          <div style="font:900 italic 110px var(--font);color:var(--gold);text-shadow:0 6px 0 #3a1500">VS</div>
+          <div class="vs-word" style="font:900 italic 110px var(--font);color:var(--gold);text-shadow:0 6px 0 #3a1500">VS</div>
           <div class="screen-sub">${L(stage.name)}</div>
         </div>
-        <div class="char-card hover-p2" style="cursor:default"><img src="${b.card}" alt="" style="transform:translateX(-50%) scaleX(-1)"><div class="info"><b>${L(b.name)}</b><em>${t('cpu')} · ${t('difficulty_' + fight.level)}</em></div></div>
+        <div class="char-card hover-p2 vs-in-r" style="cursor:default"><img src="${b.card}" alt="" style="transform:translateX(-50%) scaleX(-1)"><div class="info"><b>${L(b.name)}</b><em>${t('cpu')} · ${t('difficulty_' + fight.level)}</em></div></div>
       </div>
     </div>`, (e) => { if (CONFIRM.includes(e.code)) go(); });
   let started = false;
@@ -406,7 +441,7 @@ function statsHtml(r) {
   const [a, b] = r.fighters;
   return `<table class="stats-table">
     <tr><th>${L(CHARACTERS[a.id].name)}</th><th>${t('statsTitle')}</th><th>${L(CHARACTERS[b.id].name)}</th></tr>
-    ${rows.map(([label, k]) => `<tr><td class="${a.stats[k] > b.stats[k] ? 'lead' : ''}">${a.stats[k]}</td><td>${t(label)}</td><td class="${b.stats[k] > a.stats[k] ? 'lead' : ''}">${b.stats[k]}</td></tr>`).join('')}
+    ${rows.map(([label, k]) => `<tr><td class="${a.stats[k] > b.stats[k] ? 'lead' : ''}" data-count="${a.stats[k]}">0</td><td>${t(label)}</td><td class="${b.stats[k] > a.stats[k] ? 'lead' : ''}" data-count="${b.stats[k]}">0</td></tr>`).join('')}
   </table>`;
 }
 

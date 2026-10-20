@@ -104,6 +104,12 @@ const STRINGS = {
   statMaxCombo: { zh: '最大连击', en: 'Best combo' },
   statBlocks: { zh: '成功防御', en: 'Hits blocked' },
   statSupers: { zh: '超必杀', en: 'Supers' },
+  // presentation
+  titleTop: { zh: '黄色', en: 'YELLOW' },
+  titleBottom: { zh: '大乱斗', en: 'BRAWL' },
+  tagline: { zh: '三只黄色的家伙，一条夜市街，只有一个能站到最后。', en: 'Three yellow troublemakers, one night market, one left standing.' },
+  selectMode: { zh: '选择模式', en: 'Select mode' },
+  pressEnter: { zh: '按 Enter 开始', en: 'Press Enter to start' },
   // phase 3: online
   online: { zh: '在线对战', en: 'Online' },
   onlineDesc: { zh: '房间号 / 邀请链接 / 快速匹配', en: 'Room codes, invite links, quick match' },
@@ -155,6 +161,12 @@ try {
 } catch (_) { /* storage blocked */ }
 
 export function getLang() { return lang; }
+
+/* Lines for the scrolling ticker on the title and menu screens. */
+export const TICKER = {
+  zh: ['奶蛙：肚子不是用来挨打的，是用来顶人的。', '肥嘟嘟：差评可以，迟到不行。', '小鸡子：这一段，只唱给对手听。', '小提示：下段扫腿必须蹲防。', '小提示：连按两下方向键可以冲刺。', '小提示：轻拳命中后立刻按必杀可以取消。'],
+  en: ['Naiwa: this belly isn\'t for taking hits. It\'s for giving them.', 'Feidudu: bad reviews are fine. Late deliveries aren\'t.', 'Chick: this verse is for my opponent only.', 'Tip: sweeps must be crouch-blocked.', 'Tip: double-tap a direction to dash.', 'Tip: cancel a landed light attack into a special.']
+};
 
 export function setLang(next) {
   lang = next === 'en' ? 'en' : 'zh';
