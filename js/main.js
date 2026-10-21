@@ -188,7 +188,6 @@ const SETTING_ROWS = [
   { key: 'sfx', label: 'sfxVol', values: [0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1], fmt: v => `${Math.round(v * 10)} / 10` },
   { key: 'roundTime', label: 'roundTimeLbl', values: [30, 60, 99, 0], fmt: v => v ? t('seconds', { n: v }) : t('noLimit') },
   { key: 'winsNeeded', label: 'winsNeededLbl', values: [1, 2, 3], fmt: v => String(v) },
-  { key: 'announcer', label: 'announcerLbl', values: [true, false], fmt: v => v ? t('on') : t('off') },
   { key: 'vsCpu', label: 'vsCpuLbl', values: ['off', 'easy', 'normal', 'hard'], fmt: v => v === 'off' ? t('vsHuman') : `${t('cpu')} · ${t('difficulty_' + v)}` }
 ];
 

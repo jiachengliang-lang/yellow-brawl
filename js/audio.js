@@ -1,12 +1,9 @@
-/* Web Audio setup, synthesized sound effects and the announcer voice. No audio files.
+/* Web Audio setup and sound effects: synthesized, plus optional recorded clips.
  * Graph: [sfx voices] → sfxBus ──────────────┐
  *        [music voices] → musicBus → duck ───┴→ master → speakers
- * The announcer uses the browser's built-in speech synthesis.
  */
 
 import { settings, onSettingChange } from './settings.js';
-import { t, L, getLang } from './i18n.js';
-import { CHARACTERS } from './data.js';
 
 let ctx = null;
 let master = null;
@@ -149,38 +146,6 @@ function cymbal(at, dur = 1.4, vol = 0.22) {
   noise({ at, dur: dur * 0.6, vol: vol * 0.6, freq: 3800, type: 'bandpass', q: 0.6 });
 }
 
-/* ------------------------------------------------------------------ announcer voice */
-let voices = [];
-function loadVoices() { voices = window.speechSynthesis?.getVoices() || []; }
-if (window.speechSynthesis) {
-  loadVoices();
-  speechSynthesis.addEventListener?.('voiceschanged', loadVoices);
-}
-
-function pickVoice(zh) {
-  const want = zh ? /^zh(-|_)?(CN|Hans)?/i : /^en(-|_)?(US|GB)?/i;
-  const pool = voices.filter(v => want.test(v.lang));
-  const pref = zh ? /Tingting|Ting-Ting|Meijia|普通话|Mandarin/i : /Daniel|Alex|Google US English|Samantha|Aaron/i;
-  return pool.find(v => pref.test(v.name)) || pool[0] || null;
-}
-
-export function speak(text, { pitch = 1, rate = 1, interrupt = false } = {}) {
-  if (!settings.announcer || !window.speechSynthesis || !text) return;
-  try {
-    if (interrupt) speechSynthesis.cancel();
-    const zh = getLang() === 'zh';
-    const u = new SpeechSynthesisUtterance(text);
-    u.lang = zh ? 'zh-CN' : 'en-US';
-    const v = pickVoice(zh);
-    if (v) u.voice = v;
-    u.pitch = pitch; u.rate = rate;
-    u.volume = Math.min(1, settings.sfx * 1.15);
-    speechSynthesis.speak(u);
-  } catch (_) { /* speech is optional */ }
-}
-
-const VOICE_PITCH = { naiwa: 0.55, kangaroo: 1.05, chick: 1.75 };
-
 /* ------------------------------------------------------------------ recorded clips (optional, local only) */
 const CLIP_FILES = {
   open: 'battle-open', ko: 'battle-ko', naiwaLaugh: 'naiwa-laugh', kangarooSuper: 'kangaroo-super',
@@ -207,8 +172,10 @@ export async function loadClips() {
 
 export function hasClips() { return Object.keys(clips).length > 0; }
 
+const voices = new Set();      // character voice clips currently playing
+
 /* Play a decoded clip; returns false if it isn't available. max = seconds before fading out. */
-function playClip(key, { vol = 1, rate = 1, max = null, duckFor = 0 } = {}) {
+function playClip(key, { vol = 1, rate = 1, max = null, duckFor = 0, voice = false } = {}) {
   const buf = clips[key];
   const c = audioCtx();
   if (!buf || !c) return false;
@@ -224,8 +191,20 @@ function playClip(key, { vol = 1, rate = 1, max = null, duckFor = 0 } = {}) {
   }
   src.connect(g).connect(sfxBus);
   src.start(t0);
+  if (voice) {
+    for (const v of voices) { try { v.stop(); } catch (_) {} }   // one voice at a time
+    voices.clear();
+    voices.add(src);
+    src.onended = () => voices.delete(src);
+  }
   if (duckFor) duck(duckFor, 0.3);
   return true;
+}
+
+/* Stop character voices (e.g. a laugh) when leaving a match. */
+export function stopVoices() {
+  for (const v of voices) { try { v.stop(); } catch (_) {} }
+  voices.clear();
 }
 
 const WIN_CLIP = { naiwa: 'naiwaLaugh', kangaroo: 'kangarooSuper', chick: 'chickWin' };
@@ -270,7 +249,7 @@ const SFX = {
   bounce: () => playClip('ball', { vol: 0.75 }) || tone({ type: 'sine', from: 280, to: 120, dur: 0.09, vol: 0.24 }),
   chickHit: (heavy) => throttled('chickHit', heavy ? 0.6 : 0.9) && playClip(heavy ? 'chickHit1' : `chickHit${2 + Math.floor(Math.random() * 3)}`, { vol: 0.8, max: heavy ? 2.2 : null }),
   comboMusic: () => playClip('combo', { vol: 0.8, max: 3.4, duckFor: 3 }),
-  superVoice: (charId) => playClip(SUPER_CLIP[charId], { vol: 0.95, max: charId === 'naiwa' ? 4.5 : 3.4, duckFor: 3 }),
+  superVoice: (charId) => playClip(SUPER_CLIP[charId], { vol: 1, max: charId === 'chick' ? 3.4 : null, duckFor: charId === 'naiwa' ? 6 : 3, voice: true }),
   cluck: () => playClip('hen', { vol: 0.9 }) || cluckSynth(),
   cluckSynth: () => { tone({ type: 'square', from: 900, to: 600, dur: 0.05, vol: 0.08 }); tone({ type: 'square', from: 1150, to: 700, dur: 0.06, vol: 0.08, delay: 0.07 }); },
   wave: () => { tone({ type: 'sawtooth', from: 520, to: 780, dur: 0.28, vol: 0.09, vibrato: 12 }); tone({ type: 'sine', from: 260, to: 390, dur: 0.28, vol: 0.12 }); },
@@ -306,6 +285,8 @@ const SFX = {
   /* the big one: plays when the round winner is announced */
   win: () => {
     const c = audioCtx(); if (!c) return;
+    // with recorded voices, keep this soft so the winner's laugh / line is clear
+    if (hasClips()) { duck(4, 0.2); cymbal(c.currentTime + 0.05, 1.6, 0.1); crowd(0.12, 2.4, 0.2, true); return; }
     duck(3.2, 0.2);
     const t0 = c.currentTime + 0.05;
     for (let i = 0; i < 10; i++) noise({ at: t0 + i * 0.035, dur: 0.05, vol: 0.06 + i * 0.012, freq: 900, q: 0.8 });   // drum roll
@@ -323,14 +304,8 @@ const SFX = {
   select: () => { tone({ type: 'square', from: 523, dur: 0.06, vol: 0.09 }); tone({ type: 'square', from: 1046, dur: 0.1, vol: 0.09, delay: 0.06 }); tone({ type: 'sine', from: 2093, dur: 0.12, vol: 0.05, delay: 0.1 }); },
   back: () => tone({ type: 'square', from: 400, to: 260, dur: 0.08, vol: 0.07 }),
 
-  /* announcer lines; keys are i18n strings so each client hears its own language */
-  voice: (key, vars = {}) => {
-    const zh = getLang() === 'zh';
-    const text = key === 'ko' ? (zh ? 'K O！' : 'K. O.!') : t(key, vars);
-    speak(text, { pitch: 0.7, rate: zh ? 1.0 : 0.95 });
-  },
-  /* the round winner says their victory line in their own voice */
-  quote: (charId) => playClip(WIN_CLIP[charId], { vol: 0.95, max: 4.5, duckFor: 3 }) || speak(L(CHARACTERS[charId]?.winQuote), { pitch: VOICE_PITCH[charId] ?? 1, rate: 1.05 })
+  /* the round winner's recorded voice: 奶蛙 laughs, 肥嘟嘟 and 小鸡子 say their lines */
+  quote: (charId) => playClip(WIN_CLIP[charId], { vol: 1, duckFor: 5, voice: true })
 };
 
 let sfxHook = null;
@@ -341,9 +316,4 @@ export function setSfxHook(fn) { sfxHook = fn; }
 export function sfx(name, ...args) {
   sfxHook?.(name, args);
   try { SFX[name]?.(...args); } catch (_) { /* audio is best-effort */ }
-}
-
-/* Stop any announcer speech (leaving a match). */
-export function hush() {
-  try { window.speechSynthesis?.cancel(); } catch (_) {}
 }

@@ -110,8 +110,6 @@ const STRINGS = {
   tagline: { zh: '三只黄色的家伙，一条夜市街，只有一个能站到最后。', en: 'Three yellow troublemakers, one night market, one left standing.' },
   selectMode: { zh: '选择模式', en: 'Select mode' },
   pressEnter: { zh: '按 Enter 开始', en: 'Press Enter to start' },
-  announcerLbl: { zh: '解说语音', en: 'Announcer voice' },
-  vsLine: { zh: '{a} 对阵 {b}', en: '{a} versus {b}' },
   // phase 3: online
   online: { zh: '在线对战', en: 'Online' },
   onlineDesc: { zh: '房间号 / 邀请链接 / 快速匹配', en: 'Room codes, invite links, quick match' },

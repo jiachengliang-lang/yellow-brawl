@@ -5,8 +5,7 @@ const DEFAULTS = {
   sfx: 0.8,            // 0..1
   roundTime: 60,       // seconds, 0 = no timer
   winsNeeded: 2,       // rounds to win a match
-  vsCpu: 'off',        // versus P2: 'off' (human) | 'easy' | 'normal' | 'hard'
-  announcer: true      // spoken round calls and victory lines
+  vsCpu: 'off'         // versus P2: 'off' (human) | 'easy' | 'normal' | 'hard'
 };
 
 const KEY = 'brawl-settings';
