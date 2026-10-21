@@ -142,8 +142,9 @@ export const CHARACTERS = {
       special2: M({ name: 'whirl', clip: 'whirl', dur: 64, startup: 8, active: 46, dmg: 24, hits: 4, gap: 12, hb: { x: 0, w: 165, y: 90, h: 140 }, hitstun: 18, blockstun: 9, push: 1.5, lunge: 3.2, lungeUntil: 54, meter: 4, hitstop: 4, finalKnockdown: true }),
       // I: super, needs a full meter
       super: M({
-        name: 'laughRiot', clip: 'laugh', dur: 110, startup: 999, active: 0, freeze: 40,
-        barrage: { start: 18, count: 12, gap: 6, kind: 'orb', speed: 12, dmg: 26, hitstun: 16, y: 170, spread: 60 },
+        name: 'laughRiot', clip: 'laugh', dur: 136, startup: 999, active: 0, freeze: 40,
+        // 18 orbs: 17 × 29 + 39 = 532 total (the original's damage)
+        barrage: { start: 18, count: 18, gap: 6, kind: 'orb', speed: 12, dmg: 29, lastDmg: 39, hitstun: 16, y: 170, spread: 60, noScale: true },
         label: { zh: '笑脸连珠', en: 'GRIN BARRAGE' },
         meter: 0
       })
@@ -195,7 +196,8 @@ export const CHARACTERS = {
       super: M({
         // motorcycle rampage: guns the scooter across the screen, ramming repeatedly, wheelie launch at the end
         name: 'expressRampage', clip: 'scooter', animFrom: 18, animFrames: 92, dur: 128, startup: 8, active: 104, freeze: 40,
-        dmg: 38, hits: 12, gap: 8, hb: { x: -30, w: 230, y: 10, h: 210 }, hitstun: 24, blockstun: 10, push: 2.6,
+        // 11 × 53 + 57 = 640 total (the original's damage)
+        dmg: 53, lastDmg: 57, noScale: true, hits: 12, gap: 8, hb: { x: -30, w: 230, y: 10, h: 210 }, hitstun: 24, blockstun: 10, push: 2.6,
         lunge: 12.5, lungeUntil: 112, invuln: 50, hitstop: 4, finalKnockdown: true, afterimage: true, rampage: true,
         label: { zh: '超级配送', en: 'EXPRESS RAMPAGE' },
         meter: 0

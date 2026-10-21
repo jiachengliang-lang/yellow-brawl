@@ -353,9 +353,10 @@ export class Match {
     att.hitsDone++;
     att.lastHitAt = att.mt;
     const final = att.hitsDone >= d.hits;
+    const move = final && d.lastDmg ? { ...d, dmg: d.lastDmg } : d;
     const px = (Math.max(hb.x, hu.x) + Math.min(hb.x + hb.w, hu.x + hu.w)) / 2;
     const py = (Math.max(hb.y, hu.y) + Math.min(hb.y + hb.h, hu.y + hu.h)) / 2;
-    this.resolveHit(att, def, d, att.facing, px, py, { final });
+    this.resolveHit(att, def, move, att.facing, px, py, { final, noScale: !!d.noScale });
   }
 
   resolveHit(att, def, d, dir, px, py, opts) {
@@ -410,7 +411,7 @@ export class Match {
       bounces: 0,
       hit: {
         dmg: spec.dmg, hitstun: spec.hitstun ?? 18, blockstun: 10, push: spec.knockdown ? 6 : 2.5,
-        hitstop: spec.knockdown ? 10 : 4, meter: 3, knockdown: !!spec.knockdown, low: false, hits: 1
+        hitstop: spec.knockdown ? 10 : 4, meter: 3, knockdown: !!spec.knockdown, low: false, hits: 1, noScale: !!spec.noScale
       }
     });
   }
@@ -438,7 +439,7 @@ export class Match {
       const target = this.fighters[1 - p.owner.side];
       if (target.invuln <= 0 && overlap(box, target.hurtbox())) {
         p.alive = false;
-        this.resolveHit(p.owner, target, p.hit, Math.sign(p.vx), p.x, p.y, { projectile: true, final: true });
+        this.resolveHit(p.owner, target, p.hit, Math.sign(p.vx), p.x, p.y, { projectile: true, final: true, noScale: p.hit.noScale });
       }
     }
     // opposing projectiles cancel each other out

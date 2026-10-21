@@ -286,7 +286,7 @@ export class Fighter {
       if (this.mt >= b.start && (this.mt - b.start) % b.gap === 0 && this.barrageIdx < b.count) {
         const last = this.barrageIdx === b.count - 1;
         const wave = Math.sin(this.barrageIdx * 1.7) * (b.spread || 0);
-        match.spawnProjectile(this, { ...b, y: b.y + wave, x: 60, vx: b.speed, knockdown: last }, true);
+        match.spawnProjectile(this, { ...b, y: b.y + wave, x: 60, vx: b.speed, knockdown: last, dmg: last && b.lastDmg ? b.lastDmg : b.dmg }, true);
         this.barrageIdx++;
         sfx('throw');
       }
