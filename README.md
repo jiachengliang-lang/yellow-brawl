@@ -1,4 +1,4 @@
-# Yellow Brawl · 黄色大乱斗
+# Yellow Brawl
 
 A 2D browser fighting game with local and online multiplayer: plain JavaScript modules + one `<canvas>`,
 no build step, no dependencies. A zero-dependency Node server handles the online lobby.
@@ -25,10 +25,10 @@ Offline-only alternative: `python3 -m http.server 5173` (everything except Onlin
 
 ## Modes
 
-- **Arcade / 街机模式**: three CPU fights (the other two fighters, then a mirror match), easy → normal → hard, a different stage each fight.
-- **Versus / 本地双人**: two players on one keyboard (or two gamepads), or 1P vs CPU (Settings → Versus · P2).
-- **Online / 在线对战**: room codes, invite links, quick match, open-room list, rematch.
-- **Training / 招式训练**: infinite health and meter, dummy behaviour (stand / crouch / block / jump / CPU), hitbox view, combo damage readout.
+- **Arcade**: three CPU fights (the other two fighters, then a mirror match), easy → normal → hard, a different stage each fight.
+- **Versus**: two players on one keyboard (or two gamepads), or 1P vs CPU (Settings → Versus · P2).
+- **Online**: room codes, invite links, quick match, open-room list, rematch.
+- **Training**: infinite health and meter, dummy behaviour (stand / crouch / block / jump / CPU), hitbox view, combo damage readout.
 
 Fighters: 奶蛙 Naiwa (tanky, belly charges), 肥嘟嘟 Feidudu (fast, milk projectiles, e-scooter), 小鸡子 Chick (sound wave, rooster projectile, basketball super).
 
