@@ -110,6 +110,11 @@ const STRINGS = {
   tagline: { zh: '三只黄色的家伙，一条夜市街，只有一个能站到最后。', en: 'Three yellow troublemakers, one night market, one left standing.' },
   selectMode: { zh: '选择模式', en: 'Select mode' },
   pressEnter: { zh: '按 Enter 开始', en: 'Press Enter to start' },
+  fxDizzy: { zh: '眩晕', en: 'DIZZY' },
+  fxDribble: { zh: '运球！', en: 'DRIBBLE!' },
+  fxCatch: { zh: '接着！', en: 'CATCH!' },
+  fxShadow: { zh: '鸡影！', en: 'SHADOW CLONES!' },
+  fxShoulder: { zh: '肩撞', en: 'BUMP' },
   // phase 3: online
   online: { zh: '在线对战', en: 'Online' },
   onlineDesc: { zh: '房间号 / 邀请链接 / 快速匹配', en: 'Room codes, invite links, quick match' },

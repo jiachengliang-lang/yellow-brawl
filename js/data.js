@@ -245,9 +245,11 @@ export const CHARACTERS = {
       // S+U: dribble dash, three hits
       special2: M({ name: 'fastBreak', clip: 'run', dur: 52, startup: 6, active: 38, dmg: 26, hits: 3, gap: 11, hb: { x: 0, w: 160, y: 40, h: 170 }, hitstun: 20, blockstun: 10, push: 2, lunge: 8.5, lungeUntil: 42, meter: 4, hitstop: 5, finalKnockdown: true, afterimage: true }),
       super: M({
-        name: 'basketball', clip: 'superStart', dur: 120, startup: 999, active: 0, freeze: 40,
-        barrage: { start: 34, count: 12, gap: 6, kind: 'ball', speed: 9, vy: -11, gravity: 0.55, dmg: 27, hitstun: 16, y: 260, spread: 30 },
-        label: { zh: '篮球雨', en: 'HOOP SHOWER' },
+        // scripted sequence (see Fighter.updateChickSuper): teleport, ball from the sky stuns,
+        // meditate, dribble, then a 36-hit accelerating ball rally pinning the opponent
+        name: 'basketball', kind: 'chickBasketball', clip: 'superStart', dur: 9999, startup: 999, active: 0, freeze: 40,
+        dmg: 520, hits: 36, bodyDamage: 18,
+        label: { zh: '篮球轮回', en: 'BASKETBALL SAMSARA' },
         meter: 0
       })
     }

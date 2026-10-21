@@ -65,6 +65,14 @@ export class Effects {
     if (Math.random() < 0.35) this.push({ kind: 'star', x: x + rand(-80, 80), y: y - rand(40, 280), vx: 0, vy: -1.5, g: 0, life: 20, size: rand(4, 8), rot: 0, vr: 0.1, color: '#fff4bd' });
   }
 
+  /* Teleport flash: a column of light plus a ring at the feet. */
+  teleport(x, y) {
+    this.push({ kind: 'beam', x, y, life: 16 });
+    for (let i = 0; i < 8; i++) {
+      this.push({ kind: 'star', x: x + rand(-40, 40), y: y - rand(20, 260), vx: rand(-1, 1), vy: rand(-3, -1), g: 0, life: rand(14, 22), size: rand(4, 8), rot: 0, vr: 0.2, color: '#fff4bd' });
+    }
+  }
+
   /* Floating text, e.g. "COUNTER" or "REVERSAL". */
   float(x, y, text, color = '#ffd84a') {
     this.push({ kind: 'float', x, y, vy: -1.4, life: 46, text, color });
@@ -190,6 +198,15 @@ export class Effects {
           ctx.fillStyle = p.color || '#d9cbb0';
           ctx.beginPath(); ctx.arc(p.x, p.y, p.r * (1.4 - a * 0.4), 0, TAU); ctx.fill();
           break;
+        case 'beam': {
+          const w = 70 * a;
+          const g = ctx.createLinearGradient(p.x - w, 0, p.x + w, 0);
+          g.addColorStop(0, 'rgba(255,240,180,0)'); g.addColorStop(0.5, `rgba(255,250,220,${0.85 * a})`); g.addColorStop(1, 'rgba(255,240,180,0)');
+          ctx.fillStyle = g; ctx.fillRect(p.x - w, 0, w * 2, p.y);
+          ctx.strokeStyle = `rgba(255,230,140,${a})`; ctx.lineWidth = 4 * a + 1;
+          ctx.beginPath(); ctx.ellipse(p.x, p.y, 40 + age * 80, (40 + age * 80) * 0.18, 0, 0, TAU); ctx.stroke();
+          break;
+        }
         case 'float':
           ctx.globalCompositeOperation = 'source-over';
           ctx.globalAlpha = Math.min(1, a * 2);

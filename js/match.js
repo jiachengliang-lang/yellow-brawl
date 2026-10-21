@@ -60,7 +60,7 @@ export class Match {
     this.events = [];
     this.lastMask = -1;
     if (this.online?.role === 'host') {
-      for (const m of ['hitSpark', 'blockSpark', 'dust', 'superAura', 'float']) {
+      for (const m of ['hitSpark', 'blockSpark', 'dust', 'superAura', 'float', 'teleport']) {
         const orig = this.fx[m].bind(this.fx);
         this.fx[m] = (...args) => { this.events.push(['f', m, args]); orig(...args); };
       }
@@ -107,7 +107,7 @@ export class Match {
   serialize() {
     const F = ['x', 'y', 'vx', 'vy', 'facing', 'hp', 'redHp', 'meter', 'state', 't', 'moveKey', 'step', 'mt', 'stun',
       'knockdown', 'kdT', 'invuln', 'flash', 'wins', 'dashDir', 'walkDir', 'comboTaken', 'comboDmg', 'airborne',
-      'hitsDone', 'lastHitAt', 'trail', 'stats'];
+      'hitsDone', 'lastHitAt', 'trail', 'stats', 'cs', 'hidden'];
     return {
       c: this.clock, ph: this.phase, pt: this.phaseT, r: this.round, tm: this.timer === Infinity ? -1 : this.timer,
       hs: this.hitstop, fz: this.freeze, fw: this.freezeWho ? this.freezeWho.side : -1, sn: this.superName,
@@ -536,13 +536,14 @@ export class Match {
     if (this.freeze > 0) drawSuperBackdrop(ctx, this);
     else drawAmbient(ctx, this);
 
-    for (const f of this.fighters) drawShadow(ctx, f);
+    for (const f of this.fighters) if (!f.hidden) drawShadow(ctx, f);
     // the attacking fighter is drawn on top
     const order = [...this.fighters].sort((a, b) => (a.state === 'attack') - (b.state === 'attack'));
     for (const f of order) this.drawTrail(ctx, f);
     for (const f of order) this.drawFighter(ctx, f);
 
     for (const p of this.projectiles) this.drawProjectile(ctx, p);
+    for (const f of this.fighters) this.drawSuperProps(ctx, f);
     this.fx.draw(ctx);
     if (this.showBoxes) this.drawBoxes(ctx);
     ctx.restore();
@@ -561,7 +562,24 @@ export class Match {
     drawBanner(ctx, this);
   }
 
+  /* 篮球轮回 props: the ball dropping from the sky and the rally ball. */
+  drawSuperProps(ctx, f) {
+    const s = f.cs;
+    if (!s) return;
+    for (const b of [s.sky && !s.sky.done ? s.sky : null, s.ball]) {
+      if (!b) continue;
+      ctx.save();
+      ctx.globalCompositeOperation = 'lighter';
+      const g = ctx.createRadialGradient(b.x, b.y, 4, b.x, b.y, 54);
+      g.addColorStop(0, 'rgba(255,200,120,.6)'); g.addColorStop(1, 'rgba(255,140,40,0)');
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(b.x, b.y, 54, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+      drawBall(ctx, b.x, b.y, 26, this.clock * 0.35);
+    }
+  }
+
   drawFighter(ctx, f) {
+    if (f.hidden) return;
     const a = f.anim(this.clock);
     const clip = f.c.clips[a.name];
     let filter = null, alpha = null;
@@ -571,7 +589,27 @@ export class Match {
     if (f.state === 'getup' && this.clock % 4 < 2) alpha = 0.6;
     if (f.state === 'attack' && f.move?.invuln && f.invuln > 0) filter = 'drop-shadow(0 0 14px rgba(255,220,120,.95))';
     const jolt = this.hitstop > 0 && f.flash > 0 ? (Math.random() - 0.5) * 9 : 0;
+    // 篮球轮回 shadow clones trailing behind
+    if (f.cs?.shadow) {
+      for (const k of [2, 1]) {
+        drawClip(ctx, clip, a.frame, f.x - f.facing * 58 * k, f.y - 6 * k, f.facing, { alpha: 0.32 / k, filter: 'brightness(1.6) saturate(.4)', state: f.state });
+      }
+    }
     drawClip(ctx, clip, a.frame, f.x + jolt, f.y, f.facing, { filter, alpha, state: f.state });
+    // dizzy stars circling the head
+    if (f.state === 'dizzy') {
+      const hy = f.y - f.c.hurtH - 18;
+      ctx.save();
+      for (let i = 0; i < 3; i++) {
+        const ang = this.clock * 0.12 + i * (Math.PI * 2 / 3);
+        const sx = f.x + Math.cos(ang) * 46, sy = hy + Math.sin(ang) * 12;
+        ctx.fillStyle = i % 2 ? '#fff4bd' : '#8ef0ff';
+        ctx.beginPath();
+        for (let j = 0; j < 10; j++) { const r = j % 2 ? 4 : 10; const t2 = j / 10 * Math.PI * 2 - Math.PI / 2; ctx.lineTo(sx + Math.cos(t2) * r, sy + Math.sin(t2) * r); }
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+    }
     // sound-wave rings in front of the singer
     if (f.state === 'attack' && f.move?.wave && f.mt >= f.move.startup && f.mt < f.move.startup + f.move.active) {
       const k = (f.mt - f.move.startup) / f.move.active;
