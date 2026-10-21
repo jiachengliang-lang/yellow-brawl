@@ -249,6 +249,7 @@ export class Fighter {
     if (def.invuln) this.invuln = def.invuln;
     if (def.cooldown) this.cooldowns[key] = def.cooldown;
     if (def.music) sfx('comboMusic');
+    if (def.rampage) sfx('engine');
     if (def.freeze) {
       this.meter = 0;
       match.startSuper(this, def.freeze);
@@ -267,6 +268,8 @@ export class Fighter {
       else this.vx *= 0.7;
     }
     if (this.mt === d.startup) sfx(d.wave ? 'wave' : 'whiff');
+    // rampage: dust kicked up behind the wheels
+    if (d.rampage && this.mt >= d.startup && this.mt % 3 === 0) match.fx.dust(this.x - this.facing * 60, GROUND, 2, -this.facing);
 
     // projectiles
     if (d.spawn && this.mt === d.spawn.at) { match.spawnProjectile(this, d.spawn); sfx(d.spawn.kind === 'chicken' ? 'cluck' : 'throw'); }

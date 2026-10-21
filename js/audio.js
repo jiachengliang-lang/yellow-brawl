@@ -253,6 +253,12 @@ const SFX = {
   cluck: () => playClip('hen', { vol: 0.9 }) || cluckSynth(),
   cluckSynth: () => { tone({ type: 'square', from: 900, to: 600, dur: 0.05, vol: 0.08 }); tone({ type: 'square', from: 1150, to: 700, dur: 0.06, vol: 0.08, delay: 0.07 }); },
   wave: () => { tone({ type: 'sawtooth', from: 520, to: 780, dur: 0.28, vol: 0.09, vibrato: 12 }); tone({ type: 'sine', from: 260, to: 390, dur: 0.28, vol: 0.12 }); },
+  /* e-scooter engine: revving rumble with a rising whine */
+  engine: () => {
+    tone({ type: 'sawtooth', from: 62, to: 118, dur: 2.2, vol: 0.16, attack: 0.08, vibrato: 9, filter: { type: 'lowpass', from: 500, to: 1400, q: 3 } });
+    tone({ type: 'square', from: 124, to: 236, dur: 2.0, vol: 0.05, attack: 0.1, vibrato: 14 });
+    noise({ dur: 2.0, vol: 0.12, freq: 420, to: 900, q: 1.5, attack: 0.15 });
+  },
   ooh: () => throttled('ooh', 2.5) && crowd(0.14, 1.1, 0.05, false),
   super: () => {
     duck(1.2, 0.35);

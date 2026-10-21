@@ -193,9 +193,11 @@ export const CHARACTERS = {
       special2: M({ name: 'scooter', clip: 'scooter', animFrom: 30, animFrames: 70, dur: 66, startup: 8, active: 46, dmg: 20, hits: 5, gap: 9, invuln: 14,
         hb: { x: 0, w: 170, y: 20, h: 170 }, hitstun: 20, blockstun: 10, push: 2, lunge: 11, lungeUntil: 54, meter: 4, hitstop: 4, finalKnockdown: true, afterimage: true }),
       super: M({
-        name: 'gutsOverload', clip: 'superPress', thenClip: 'superMilk', thenAt: 40, dur: 120, startup: 999, active: 0, freeze: 40,
-        barrage: { start: 40, count: 12, gap: 6, kind: 'milk', speed: 13, vy: -3.2, gravity: 0.12, dmg: 26, hitstun: 16, y: 200, spread: 40 },
-        label: { zh: '牛奶暴雨', en: 'MILK STORM' },
+        // motorcycle rampage: guns the scooter across the screen, ramming repeatedly, wheelie launch at the end
+        name: 'expressRampage', clip: 'scooter', animFrom: 18, animFrames: 92, dur: 128, startup: 8, active: 104, freeze: 40,
+        dmg: 38, hits: 12, gap: 8, hb: { x: -30, w: 230, y: 10, h: 210 }, hitstun: 24, blockstun: 10, push: 2.6,
+        lunge: 12.5, lungeUntil: 112, invuln: 50, hitstop: 4, finalKnockdown: true, afterimage: true, rampage: true,
+        label: { zh: '超级配送', en: 'EXPRESS RAMPAGE' },
         meter: 0
       })
     }
