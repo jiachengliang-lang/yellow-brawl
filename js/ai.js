@@ -85,7 +85,10 @@ export class CpuController {
   decide(self, opp, fwd, back) {
     const d = Math.abs(opp.x - self.x);
     const p = this.p;
-    const zoner = !!self.c.moves.special.spawn;   // has a projectile on U
+    // which special (if any) throws a projectile: U, or down + U
+    const projKey = self.c.moves.special.spawn ? 'special' : self.c.moves.special2.spawn ? 'special2' : null;
+    const zoner = !!projKey;
+    const shoot = () => this.tap({ special: true, down: projKey === 'special2' });
 
     if (opp.state === 'down' || opp.state === 'getup') {
       if (d > 260) this.hold({ [fwd]: true }, rand(10, 20));
@@ -102,7 +105,7 @@ export class CpuController {
     }
 
     if (d > 340) {
-      if (zoner && chance(0.28)) this.tap({ special: true });
+      if (zoner && chance(0.28)) shoot();
       else if (!zoner && d < 470 && chance(0.12)) this.tap({ special: true });
       else if (chance(0.1)) this.hold({ up: true, [fwd]: true }, 4);
       else if (chance(0.2 * p.aggr)) { this.tap({ [fwd]: true }); this.idle(2); this.tap({ [fwd]: true }); this.idle(10); }

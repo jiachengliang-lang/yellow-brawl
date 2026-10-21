@@ -186,11 +186,11 @@ export const CHARACTERS = {
       crouchLight: M({ name: 'lowJab', clip: 'crouchAttack', animFrom: 0, animFrames: 12, dur: 18, startup: 5, active: 3, dmg: 28, hb: { x: 20, w: 125, y: 50, h: 90 }, hitstun: 15 }),
       crouchKick: M({ name: 'lowRush', clip: 'crouchAttack', dur: 34, startup: 8, active: 5, dmg: 52, hb: { x: 20, w: 160, y: 0, h: 80 }, low: true, knockdown: true, hitstun: 22, blockstun: 12, push: 3, meter: 8, hitstop: 7 }),
       air: M({ name: 'airPunch', clip: 'punchR', dur: 24, startup: 4, active: 10, dmg: 46, hb: { x: 0, w: 130, y: 60, h: 120 }, hitstun: 18, hitstop: 6 }),
-      // U: throw a milk carton
-      special: M({ name: 'milkThrow', clip: 'milkThrow', dur: 36, startup: 999, active: 0, cooldown: 50,
+      // S+U: throw a milk carton
+      special2: M({ name: 'milkThrow', clip: 'milkThrow', dur: 36, startup: 999, active: 0, cooldown: 50,
         spawn: { at: 14, kind: 'milk', vx: 10.5, vy: -7, gravity: 0.34, dmg: 62, hitstun: 22, x: 50, y: 210 } }),
-      // S+U: scooter ram, briefly invulnerable at the start
-      special2: M({ name: 'scooter', clip: 'scooter', animFrom: 30, animFrames: 70, dur: 66, startup: 8, active: 46, dmg: 20, hits: 5, gap: 9, invuln: 14,
+      // U: scooter ram, briefly invulnerable at the start (same as the original)
+      special: M({ name: 'scooter', clip: 'scooter', animFrom: 30, animFrames: 70, dur: 66, startup: 8, active: 46, dmg: 20, hits: 5, gap: 9, invuln: 14,
         hb: { x: 0, w: 170, y: 20, h: 170 }, hitstun: 20, blockstun: 10, push: 2, lunge: 11, lungeUntil: 54, meter: 4, hitstop: 4, finalKnockdown: true, afterimage: true }),
       super: M({
         // motorcycle rampage: guns the scooter across the screen, ramming repeatedly, wheelie launch at the end
