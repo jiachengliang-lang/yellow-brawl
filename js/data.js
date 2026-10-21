@@ -226,7 +226,7 @@ export const CHARACTERS = {
         M({ name: 'peck', clip: 'atk5', dur: 15, startup: 4, active: 3, dmg: 28, hb: { x: 20, w: 125, y: 150, h: 100 }, hitstun: 16, lunge: 1.6 }),
         M({ name: 'swing', clip: 'atk3', dur: 16, startup: 4, active: 3, dmg: 30, hb: { x: 20, w: 140, y: 140, h: 110 }, hitstun: 17, lunge: 1.8 }),
         M({ name: 'dab', clip: 'atk2', dur: 18, startup: 4, active: 4, dmg: 34, hb: { x: 20, w: 150, y: 150, h: 100 }, hitstun: 19, lunge: 2 }),
-        M({ name: 'shadow5', clip: 'atk1', dur: 44, startup: 3, active: 32, dmg: 13, hits: 5, gap: 6, hb: { x: 0, w: 175, y: 110, h: 150 }, hitstun: 13, push: 1.2, lunge: 1.2, meter: 2, hitstop: 3, finalKnockdown: true })
+        M({ name: 'shadow5', clip: 'atk1', dur: 44, startup: 3, active: 32, dmg: 13, hits: 5, gap: 6, hb: { x: 0, w: 175, y: 110, h: 150 }, hitstun: 13, push: 1.2, lunge: 1.2, meter: 2, hitstop: 3, finalKnockdown: true, music: true })
       ],
       heavy: [
         M({ name: 'dribble', clip: 'atk6', dur: 28, startup: 8, active: 5, dmg: 72, hb: { x: 10, w: 165, y: 60, h: 150 }, hitstun: 23, blockstun: 12, push: 5.5, lunge: 4, meter: 9, hitstop: 9 }),

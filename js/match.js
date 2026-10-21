@@ -10,7 +10,7 @@ import { drawAmbient, drawShadow, drawSuperBackdrop, drawVignette, drawKoFx, dra
 import { drawStage, W, H, GROUND } from './stage.js';
 import { settings } from './settings.js';
 import { Effects } from './fx.js';
-import { sfx, setSfxHook } from './audio.js';
+import { sfx, setSfxHook, hush } from './audio.js';
 import { t, L } from './i18n.js';
 
 const STEP = 1000 / 60;
@@ -64,7 +64,7 @@ export class Match {
         const orig = this.fx[m].bind(this.fx);
         this.fx[m] = (...args) => { this.events.push(['f', m, args]); orig(...args); };
       }
-      setSfxHook((name) => this.events.push(['s', name]));
+      setSfxHook((name, args) => this.events.push(['s', name, args]));
     }
   }
 
@@ -99,6 +99,7 @@ export class Match {
     this.running = false;
     cancelAnimationFrame(this.raf);
     if (this.online?.role === 'host') setSfxHook(null);
+    hush();
   }
 
   /* ------------------------------------------------------------ online */
@@ -146,7 +147,7 @@ export class Match {
     }));
     for (const e of d.ev || []) {
       if (e[0] === 'f') this.fx[e[1]]?.(...e[2]);
-      else if (e[0] === 's') sfx(e[1]);
+      else if (e[0] === 's') sfx(e[1], ...(e[2] || []));
     }
   }
 
@@ -249,15 +250,17 @@ export class Match {
     if (this.phase === 'intro') {
       // round 1: VS panels (0–80), each fighter's line, then ROUND / FIGHT
       const q = this.round === 1 ? 165 : 0;
-      if (this.round === 1 && this.phaseT === 8) sfx('fight');
+      if (this.round === 1 && this.phaseT === 8) sfx('vs');
+      if (this.round === 1 && this.phaseT === 24) sfx('voice', 'vsLine', { a: this.nameOf(0), b: this.nameOf(1) });
       if (q && this.phaseT === 82) this.quotes = [{ side: 0, t: 0 }, { side: 1, t: -30 }];
       if (this.phaseT === q + 10) {
         const need = this.winsNeeded;
         const final = this.round === MAX_ROUNDS || (need > 1 && a.wins === need - 1 && b.wins === need - 1);
         this.say(final ? t('finalRound') : t('round', { n: this.round }), { dur: 62, style: final ? 'final' : 'round', sub: final ? '' : `${this.nameOf(0)}  VS  ${this.nameOf(1)}` });
         sfx('round');
+        sfx('voice', final ? 'finalRound' : 'round', { n: this.round });
       }
-      if (this.phaseT === q + 72) { this.say(t('fight'), { dur: 42, style: 'fight' }); sfx('fight'); a.toNeutral(); b.toNeutral(); this.quotes = null; }
+      if (this.phaseT === q + 72) { this.say(t('fight'), { dur: 42, style: 'fight' }); sfx('fight'); sfx('voice', 'fight'); a.toNeutral(); b.toNeutral(); this.quotes = null; }
       if (this.phaseT >= q + 76) { this.phase = 'fight'; this.phaseT = 0; }
     } else if (this.phase === 'fight') {
       if (this.roundTime && ++this.timerFrames >= 60) {
@@ -275,8 +278,12 @@ export class Match {
           w.vx = 0; w.setState('win');
           this.say(t('wins', { name: this.nameOf(this.winner) }), { dur: 120, style: 'win', sub: this.perfect ? t('perfect') : '' });
           sfx('win');
+          sfx('voice', 'wins', { name: this.nameOf(this.winner) });
+          if (this.perfect) sfx('voice', 'perfect');
+          sfx('quote', w.id);
         } else {
           this.say(t('draw'), { dur: 120, style: 'time' });
+          sfx('voice', 'draw');
         }
         this.phaseT = 100;
       }
@@ -297,6 +304,7 @@ export class Match {
     this.koKind = 'ko'; this.koClock = this.clock;
     this.say(t('ko'), { dur: 96, style: 'ko' });
     sfx('ko');
+    sfx('voice', 'ko');
   }
 
   timeOver() {
@@ -307,6 +315,7 @@ export class Match {
     if (this.winner != null) this.fighters[1 - this.winner].setState('lose');
     this.koKind = 'time'; this.koClock = this.clock;
     this.say(t('timeOver'), { dur: 70, style: 'time' });
+    sfx('voice', 'timeOver');
   }
 
   endRound() {
@@ -377,6 +386,8 @@ export class Match {
       const heavy = d.dmg >= 60 || d.knockdown || (opts.final && d.finalKnockdown);
       this.fx.hitSpark(px, py, dir, heavy, att.c.color);
       sfx(heavy ? 'heavy' : 'light');
+      if (att.id === 'chick') sfx('chickHit', heavy);
+      if (heavy && (d.knockdown || opts.final) && res === 'hit') sfx('ooh');
       this.hitstop = Math.max(this.hitstop, d.hitstop + (counter ? 3 : 0));
       this.shake = Math.max(this.shake, heavy ? 9 : 3);
       this.shakeBias = dir * (heavy ? 14 : 6);
@@ -454,6 +465,7 @@ export class Match {
     this.superName = L(f.c.moves.super.label);
     f.stats.supers++;
     sfx('super');
+    sfx('superVoice', f.id);
   }
 
   trackCombos() {

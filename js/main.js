@@ -5,7 +5,7 @@ import { loadAll, usingPlaceholders } from './assets.js';
 import { onKey } from './input.js';
 import { Match } from './match.js';
 import { STAGES, STAGE_IDS, stageThumb } from './stage.js';
-import { sfx } from './audio.js';
+import { sfx, loadClips } from './audio.js';
 import { playMusic } from './music.js';
 import { settings, setSetting } from './settings.js';
 import { t, L, getLang, setLang, TICKER } from './i18n.js';
@@ -99,7 +99,7 @@ const panelItem = (id, label) => `<button class="menu-item" data-nav id="${id}">
 async function boot() {
   show(`<div class="screen"><div class="logo"><div class="kicker">${t('gameSub')}</div><h1>${t('gameTitle')}</h1></div>
     <div class="loadbar"><i id="load-fill"></i></div><div class="screen-sub" style="margin-top:10px">${t('loading')}</div></div>`);
-  await loadAll((p) => { const el = $('#load-fill'); if (el) el.style.width = `${Math.round(p * 100)}%`; });
+  await Promise.all([loadAll((p) => { const el = $('#load-fill'); if (el) el.style.width = `${Math.round(p * 100)}%`; }), loadClips()]);
   // invite link: ?room=CODE jumps straight into that online room
   const code = new URLSearchParams(location.search).get('room');
   if (code) {
@@ -188,6 +188,7 @@ const SETTING_ROWS = [
   { key: 'sfx', label: 'sfxVol', values: [0, .1, .2, .3, .4, .5, .6, .7, .8, .9, 1], fmt: v => `${Math.round(v * 10)} / 10` },
   { key: 'roundTime', label: 'roundTimeLbl', values: [30, 60, 99, 0], fmt: v => v ? t('seconds', { n: v }) : t('noLimit') },
   { key: 'winsNeeded', label: 'winsNeededLbl', values: [1, 2, 3], fmt: v => String(v) },
+  { key: 'announcer', label: 'announcerLbl', values: [true, false], fmt: v => v ? t('on') : t('off') },
   { key: 'vsCpu', label: 'vsCpuLbl', values: ['off', 'easy', 'normal', 'hard'], fmt: v => v === 'off' ? t('vsHuman') : `${t('cpu')} · ${t('difficulty_' + v)}` }
 ];
 
@@ -483,6 +484,7 @@ function arcadeResult(r) {
         </div>
       </div>
     </div>`);
+  sfx(won ? 'jingle' : 'lose');
   $('#r-main').onclick = () => { sfx('select'); if (won) arcade.idx++; showVersusSplash(); };
   $('#r-quit').onclick = () => { sfx('back'); showMenu(); };
   keyHandler = navMenu(ui, showMenu);
@@ -518,6 +520,7 @@ function versusResult(r, a, b, stage) {
         </div>
       </div>
     </div>`);
+  sfx('jingle');
   $('#v-again').onclick = () => { sfx('select'); startVersus(a, b, stage); };
   $('#v-change').onclick = () => { sfx('select'); showSelect('versus'); };
   $('#v-quit').onclick = () => { sfx('back'); showMenu(); };

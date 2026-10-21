@@ -248,6 +248,7 @@ export class Fighter {
     if (!airborne) this.vx = 0;
     if (def.invuln) this.invuln = def.invuln;
     if (def.cooldown) this.cooldowns[key] = def.cooldown;
+    if (def.music) sfx('comboMusic');
     if (def.freeze) {
       this.meter = 0;
       match.startSuper(this, def.freeze);

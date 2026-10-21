@@ -359,7 +359,7 @@ function showResult(result) {
         <div class="menu">${api.panelItem('or-room', t('backToRoom'))}${api.panelItem('or-leave', t('leaveRoom'))}</div>
       </div>
     </div>`);
-  sfx(won ? 'win' : 'back');
+  sfx(won || draw ? 'jingle' : 'lose');
   $('#or-room').onclick = () => { sfx('select'); screen = null; room ? showRoom() : showLobby(); };
   $('#or-leave').onclick = () => { sfx('back'); showLobby(); };
   api.setKeyHandler(api.navMenu(document, () => showLobby()));
