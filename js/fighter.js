@@ -137,7 +137,7 @@ export class Fighter {
   toNeutral() {
     if (this.moveKey === 'super') { this.meter = Math.min(this.meter, 3); this.meterLock = SUPER_METER_LOCK; }
     this.move = null; this.moveKey = null; this.queued = null;
-    this.hidden = false; this.cs = null;
+    this.hidden = false; this.cs = null; this.sp = null;
     this.knockdown = false;
     this.setState(this.in?.down ? 'crouch' : 'idle');
   }
@@ -157,8 +157,20 @@ export class Fighter {
 
     if (this.pressed('super') && this.meter >= 100) { this.consume('super'); return this.startMove(mv.super, 'super', 0, match); }
     if (this.pressed('special')) {
-      const key = inp.down ? 'special2' : 'special';
-      if (!(this.cooldowns[key] > 0) && this.paySpecial(match)) { this.consume('special'); return this.startMove(mv[key], key, 0, match); }
+      if (!(this.cooldowns.special > 0) && this.paySpecial(match)) { this.consume('special'); return this.startMove(mv.special, 'special', 0, match); }
+    }
+    // dash attacks: hold forward + J / K (characters that have them)
+    if (fwd && !inp.down && mv.dashLight && (this.pressed('light') || this.pressed('heavy'))) {
+      const b = this.pressed('light') ? 'light' : 'heavy';
+      const key = b === 'light' ? 'dashLight' : 'dashHeavy';
+      const def = mv[key];
+      this.consume(b);
+      if (this.cooldowns[key] > 0) return;
+      if (def.cost && !match.training) {
+        if (this.meter < def.cost) { match.fx.float(this.x, this.y - this.c.hurtH - 20, tr('fxNoMeter'), '#8ef0ff'); sfx('back'); return; }
+        this.meter -= def.cost;
+      }
+      return this.startMove(def, key, 0, match);
     }
     if (this.pressed('light') || this.pressed('heavy') || this.pressed('kick')) {
       const b = this.pressed('light') ? 'light' : this.pressed('heavy') ? 'heavy' : 'kick';
@@ -282,6 +294,9 @@ export class Fighter {
     const d = this.move;
     this.mt++;
     if (d.kind === 'chickBasketball') return this.updateChickSuper(opp, match);
+    if (d.kind === 'bellyCyclone') return this.updateBellyCyclone(opp, match);
+    if (d.kind === 'scooterCrash') return this.updateScooterCrash(opp, match);
+    if (d.kind === 'chickShadow') return this.updateChickShadow(opp, match);
     const activeEnd = d.startup + d.active;
 
     // forward movement
@@ -318,8 +333,7 @@ export class Fighter {
       // cancel a connected normal into a special or super
       if (this.pressed('super') && this.meter >= 100) { this.consume('super'); return this.startMove(this.c.moves.super, 'super', 0, match); }
       if (this.pressed('special')) {
-        const key = this.in.down ? 'special2' : 'special';
-        if (!(this.cooldowns[key] > 0) && this.paySpecial(match)) { this.consume('special'); return this.startMove(this.c.moves[key], key, 0, match); }
+        if (!(this.cooldowns.special > 0) && this.paySpecial(match)) { this.consume('special'); return this.startMove(this.c.moves.special, 'special', 0, match); }
       }
     }
     if (this.queued && this.mt >= activeEnd) {
@@ -335,6 +349,167 @@ export class Fighter {
     }
     this.physics(match);
     if (this.mt >= d.dur) this.toNeutral();
+  }
+
+  /* Does a hitbox (relative to this fighter) touch the opponent? Returns the contact point. */
+  boxHit(hb, opp) {
+    const x = this.facing > 0 ? this.x + hb.x : this.x - hb.x - hb.w;
+    const box = { x, y: this.y - hb.y - hb.h, w: hb.w, h: hb.h };
+    const hu = opp.hurtbox();
+    if (!hu || box.x > hu.x + hu.w || box.x + box.w < hu.x || box.y > hu.y + hu.h || box.y + box.h < hu.y) return null;
+    return { x: (Math.max(box.x, hu.x) + Math.min(box.x + box.w, hu.x + hu.w)) / 2, y: (Math.max(box.y, hu.y) + Math.min(box.y + box.h, hu.y + hu.h)) / 2 };
+  }
+
+  /* 肚皮旋风顶: belly bump → bounce back → dash in → 4 whirlwind punches → belly launcher. */
+  updateBellyCyclone(opp, match) {
+    const P = this.move.phases;
+    const order = ['belly1', 'dash', 'whirl', 'belly2'];
+    if (!this.sp) { this.sp = { phase: 0, start: this.mt - 1, recoil: 0, hit1: false, hit2: false, whirlNext: P.whirl.first, whirlHits: 0 }; sfx('whiff'); }
+    const s = this.sp;
+    const pf = this.mt - s.start;
+    const near = (v, target, step) => (v < target ? Math.min(v + step, target) : Math.max(v - step, target));
+    const next = () => {
+      s.phase++; s.start = this.mt; this.faceOpponent(opp);
+      if (s.phase === 1) { this.vx = this.facing * P.dash.speed; match.fx.dust(this.x, GROUND, 8, -this.facing); sfx('dash'); }
+      if (s.phase === 2) sfx('whiff');
+      if (s.phase === 4) return this.toNeutral();
+    };
+    const strike = (p, extra = {}) => {
+      const at = this.boxHit(p.hb, opp);
+      if (!at) return false;
+      match.resolveHit(this, opp, { ...p, hits: 1, ...extra }, this.facing, at.x, at.y, { final: false });
+      return opp.state !== 'blockstun';
+    };
+    switch (s.phase) {
+      case 0:
+        if (pf === P.belly1.hitAt && !s.hit1) {
+          s.hit1 = true;
+          if (strike(P.belly1)) { s.recoil = 14; this.vx = -this.facing * 7; }
+        }
+        if (s.recoil > 0) { s.recoil--; this.vx = near(this.vx, -this.facing * 7, 0.9); }
+        else this.vx = near(this.vx, 0, 0.8);
+        if (pf >= P.belly1.dur) next();
+        break;
+      case 1:
+        this.faceOpponent(opp);
+        this.vx = this.facing * P.dash.speed;
+        if (pf >= P.dash.dur) next();
+        break;
+      case 2:
+        this.faceOpponent(opp);
+        this.vx *= 0.9;
+        if (pf >= s.whirlNext && s.whirlHits < P.whirl.hits) {
+          s.whirlNext += P.whirl.gap;
+          s.whirlHits++;
+          const last = s.whirlHits >= P.whirl.hits;
+          strike(P.whirl, { push: last ? P.whirl.lastPush : P.whirl.push, hitstop: last ? 6 : P.whirl.hitstop });
+        }
+        if (pf >= P.whirl.dur) next();
+        break;
+      case 3:
+        if (pf === P.belly2.hitAt && !s.hit2) { s.hit2 = true; strike(P.belly2); }
+        this.vx = near(this.vx, 0, 0.7);
+        if (pf >= P.belly2.dur) next();
+        break;
+    }
+    if (this.state === 'attack') this.physics(match);
+  }
+
+  /* 翘头撞击: a long scooter charge that rams every few frames, with a wheelie burst halfway. */
+  updateScooterCrash(opp, match) {
+    const d = this.move;
+    const f = this.mt;
+    const total = d.dur;
+    if (!this.sp) this.sp = { contacts: 0 };
+    if (f === d.startup) {
+      this.vx = this.facing * d.dashSpeed;
+      match.fx.dust(this.x, GROUND, 12, -this.facing);
+      sfx('dash'); sfx('engine');
+    }
+    if (f >= d.startup && f <= total - 18) {
+      this.vx = this.facing * (f < 120 ? d.chargeSpeed : d.cruiseSpeed);
+      if (f % d.hitGap === 0 && opp.state !== 'ko') {
+        const at = this.boxHit(d.hb, opp);
+        if (at) {
+          this.sp.contacts++;
+          match.resolveHit(this, opp, d, this.facing, at.x, at.y, { final: false });
+          match.shake = Math.max(match.shake, 2.4);
+          if (this.sp.contacts % 6 === 0) match.fx.hitSpark(opp.x, opp.y - 120, this.facing, true, this.c.color);
+        }
+      }
+    } else if (f > total - 18) this.vx *= 0.68;
+    if (f === d.wheelieAt) {
+      // front wheel up: a burst of speed
+      this.vx = this.facing * 20;
+      match.fx.superAura(this.x, this.y, this.c.color);
+      match.fx.dust(this.x - this.facing * 34, GROUND, 10, -this.facing);
+      match.screenFlash = Math.max(match.screenFlash, 2);
+      match.shake = Math.max(match.shake, 9);
+      sfx('dash');
+    }
+    if (f >= d.startup && f % 2 === 0) match.fx.dust(this.x - this.facing * 30, GROUND, f >= d.wheelieAt ? 3 : 1, -this.facing);
+    this.physics(match);
+    if (f >= total) this.toNeutral();
+  }
+
+  /* 鸡影三重奏: blink in front, a shadow clone appears behind the opponent, three unblockable
+   * charged hits from both sides, then the opponent is launched. */
+  updateChickShadow(opp, match) {
+    const d = this.move;
+    const f = this.mt;
+    const clampX = (x) => Math.max(WALL_L + 56, Math.min(WALL_R - 56, x));
+    if (!this.sp) {
+      const dir = Math.sign(opp.x - this.x) || this.facing;
+      this.facing = dir;
+      match.fx.teleport(this.x, this.y);
+      this.x = clampX(opp.x - dir * 150);
+      this.y = GROUND; this.vx = 0; this.vy = 0;
+      this.invuln = Math.max(this.invuln, d.dur);
+      this.sp = { frontX: this.x, lockX: opp.x, clone: { x: clampX(opp.x + dir * 150), facing: -dir }, hits: [false, false, false] };
+      match.fx.teleport(this.x, this.y);
+      match.fx.teleport(this.sp.clone.x, GROUND);
+      match.fx.float(this.x, this.y - this.c.hurtH - 30, tr('fxShadowTriple'), '#ffe46b');
+      match.fx.float(this.sp.clone.x, GROUND - this.c.hurtH - 30, tr('fxCloneReady'), '#ffd23f');
+      match.shake = Math.max(match.shake, 10);
+      sfx('dash');
+    }
+    const s = this.sp;
+    if (opp.state !== 'ko' && f < d.dur) {
+      this.x = s.frontX; this.vx = 0;
+      opp.x = s.lockX; opp.vx = 0;
+    }
+    if (d.chargeAt.includes(f)) {
+      match.fx.superAura(this.x, this.y, this.c.color);
+      match.fx.superAura(s.clone.x, GROUND, '#ffd23f');
+      match.fx.float(this.x, this.y - this.c.hurtH - 20, tr('fxCharge'), '#ffe46b');
+      match.fx.float(s.clone.x, GROUND - this.c.hurtH - 20, tr('fxCharge'), '#ffe46b');
+      sfx('wave');
+    }
+    d.hitAt.forEach((at, i) => {
+      if (f < at || s.hits[i] || opp.state === 'ko') return;
+      s.hits[i] = true;
+      const last = i === d.hitAt.length - 1;
+      match.resolveHit(this, opp, { dmg: d.dmgs[i], hitstun: 36, blockstun: 12, push: 0, hitstop: last ? 12 : 7, meter: 8, hits: 1 },
+        this.facing, opp.x - this.facing * 20, opp.y - opp.c.hurtH * 0.55, { final: false, unblockable: true });
+      opp.x = s.lockX; opp.vx = 0;
+      match.fx.hitSpark(opp.x + this.facing * 30, opp.y - opp.c.hurtH * 0.45, -this.facing, true, '#ffd23f');
+      match.shake = Math.max(match.shake, last ? 15 : 9);
+    });
+    if (f >= d.dur) {
+      if (opp.state !== 'ko' && opp.hp > 0) {
+        // launch
+        opp.move = null; opp.queued = null;
+        opp.setState('hurt');
+        opp.knockdown = true; opp.kdT = 0; opp.stun = 999;
+        opp.vx = 0; opp.vy = -16; opp.y = Math.min(opp.y, GROUND - 1);
+        match.fx.dust(opp.x, GROUND, 14);
+        match.fx.float(opp.x, GROUND - opp.c.hurtH - 24, tr('fxLaunch'), '#ffe46b');
+        match.shake = Math.max(match.shake, 10);
+        sfx('heavy');
+      }
+      this.invuln = 8;
+      this.toNeutral();
+    }
   }
 
   /* 篮球轮回: teleport → ball drops from the sky (stun) → meditate → dribble → throw →
@@ -521,7 +696,7 @@ export class Fighter {
 
   /* Returns 'block' | 'hit' | 'ko'. dir = direction the hit pushes (+1 right). */
   takeHit(att, d, dir, opts = {}) {
-    if (this.canBlock(d)) {
+    if (!opts.unblockable && this.canBlock(d)) {
       this.setState('blockstun');
       this.stun = d.blockstun;
       this.vx = dir * d.push * 0.9;
@@ -600,6 +775,23 @@ export class Fighter {
     switch (this.state) {
       case 'attack': {
         const d = this.move;
+        if (d.kind === 'bellyCyclone' && this.sp) {
+          const P = d.phases;
+          const names = ['belly1', 'dash', 'whirl', 'belly2'];
+          const clipOf = ['bellyCombo', 'belly', 'whirl', 'bellyCombo'];
+          const ph = Math.min(3, this.sp.phase);
+          const k = Math.min(1, (this.mt - this.sp.start) / P[names[ph]].dur);
+          return { name: clipOf[ph], frame: Math.floor(k * (clips[clipOf[ph]].frames - 1)) };
+        }
+        if (d.kind === 'scooterCrash') return { name: 'scooter', frame: Math.floor(Math.min(1, this.mt / d.dur) * (clips.scooter.frames - 1)) };
+        if (d.kind === 'chickShadow') {
+          const hitWin = d.hitAt.findIndex(at => this.mt >= at - 6 && this.mt < at + 8);
+          if (hitWin >= 0) {
+            const at = d.hitAt[hitWin];
+            return { name: 'atk5', frame: Math.min(clips.atk5.frames - 1, Math.floor((this.mt - at + 6) / 14 * clips.atk5.frames)) };
+          }
+          return { name: 'atk2', frame: 1 + (Math.floor(this.mt / 6) % 2) };
+        }
         if (d.kind === 'chickBasketball' && this.cs) {
           const s = this.cs;
           if (s.phase === 'meditate' || s.phase === 'teleport') {

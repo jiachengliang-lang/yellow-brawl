@@ -136,10 +136,20 @@ export const CHARACTERS = {
       crouchLight: M({ name: 'crouchPunch', clip: 'crouchPunch', dur: 20, startup: 5, active: 3, dmg: 30, hb: { x: 20, w: 125, y: 70, h: 80 }, hitstun: 15 }),
       crouchKick: M({ name: 'sweep', clip: 'crouchKick', dur: 36, startup: 8, active: 5, dmg: 55, hb: { x: 20, w: 165, y: 0, h: 70 }, low: true, knockdown: true, hitstun: 22, blockstun: 12, push: 3, meter: 8, hitstop: 7 }),
       air: M({ name: 'airKick', clip: 'kick', animFrom: 6, animFrames: 10, dur: 26, startup: 5, active: 10, dmg: 50, hb: { x: 0, w: 140, y: 40, h: 110 }, hitstun: 18, hitstop: 6 }),
-      // U: belly charge
-      special: M({ name: 'belly', clip: 'belly', dur: 48, startup: 12, active: 10, dmg: 95, hb: { x: 0, w: 190, y: 70, h: 160 }, hitstun: 30, blockstun: 16, push: 10, lunge: 9, lungeUntil: 22, meter: 8, hitstop: 12, knockdown: true, afterimage: true }),
-      // S+U: whirlwind punches
-      special2: M({ name: 'whirl', clip: 'whirl', dur: 64, startup: 8, active: 46, dmg: 24, hits: 4, gap: 12, hb: { x: 0, w: 165, y: 90, h: 140 }, hitstun: 18, blockstun: 9, push: 1.5, lunge: 3.2, lungeUntil: 54, meter: 4, hitstop: 4, finalKnockdown: true }),
+      // U: 肚皮旋风顶 — scripted in Fighter.updateBellyCyclone (belly → bounce → dash → whirl ×4 → belly launcher)
+      special: M({ name: 'bellyCyclone', kind: 'bellyCyclone', clip: 'bellyCombo', dur: 134, startup: 999, active: 0, cooldown: 120,
+        phases: {
+          belly1: { dur: 34, hitAt: 8, dmg: 82, hb: { x: 0, w: 200, y: 60, h: 150 }, hitstun: 30, blockstun: 14, push: 8.5, hitstop: 9, meter: 8 },
+          dash: { dur: 18, speed: 13.5 },
+          whirl: { dur: 46, hits: 4, gap: 6, first: 6, dmg: 18, hb: { x: 0, w: 185, y: 70, h: 140 }, hitstun: 14, blockstun: 7, push: 1.6, lastPush: 5.4, hitstop: 3, meter: 3 },
+          belly2: { dur: 36, hitAt: 8, dmg: 112, hb: { x: 0, w: 205, y: 60, h: 154 }, hitstun: 36, blockstun: 16, push: 11.5, hitstop: 12, meter: 10 }
+        } }),
+      // → + J: laughing orb; → + K: belly bump that leaves a giant orb (costs 35)
+      dashLight: M({ name: 'dashOrb', clip: 'lightR', dur: 22, startup: 999, active: 0, cooldown: 14, lunge: 1.6, lungeUntil: 8,
+        spawn: { at: 8, kind: 'orbSmall', vx: 9.5, vy: 0, gravity: 0, dmg: 52, hitstun: 18, x: 58, y: 155 } }),
+      dashHeavy: M({ name: 'bellyOrb', clip: 'bellyCombo', dur: 39, startup: 10, active: 5, cost: 35, cooldown: 48, dmg: 70, hb: { x: 20, w: 170, y: 60, h: 132 },
+        hitstun: 24, blockstun: 12, push: 7, lunge: 3, hitstop: 8, meter: 8,
+        spawn: { at: 15, kind: 'orbBig', vx: 7.2, vy: 0, gravity: 0, dmg: 110, hitstun: 26, x: 74, y: 180, knockdown: true } }),
       // I: super, needs a full meter
       super: M({
         name: 'laughRiot', clip: 'laugh', dur: 136, startup: 999, active: 0, freeze: 40,
@@ -182,17 +192,20 @@ export const CHARACTERS = {
         M({ name: 'heavy', clip: 'heavy1', dur: 26, startup: 7, active: 4, dmg: 70, hb: { x: 20, w: 150, y: 150, h: 110 }, hitstun: 22, blockstun: 12, push: 5, lunge: 3, meter: 9, hitstop: 8 }),
         M({ name: 'heavy2', clip: 'heavy3', dur: 32, startup: 8, active: 5, dmg: 78, hb: { x: 20, w: 165, y: 140, h: 120 }, hitstun: 28, blockstun: 13, push: 9, lunge: 3.5, meter: 10, hitstop: 11, knockdown: true })
       ],
-      // long-arm punch
-      kick: M({ name: 'longArm', clip: 'dashPunch', dur: 40, startup: 13, active: 6, dmg: 72, hb: { x: 40, w: 290, y: 140, h: 100 }, hitstun: 22, blockstun: 12, push: 6, meter: 8, hitstop: 9 }),
+      // L: quick low punch (the long-arm glove is now → + K)
+      kick: M({ name: 'lowQuick', clip: 'heavy1', dur: 23, startup: 6, active: 5, dmg: 62, hb: { x: 20, w: 158, y: 30, h: 110 }, hitstun: 20, blockstun: 10, push: 4.4, lunge: 2.6, meter: 7, hitstop: 6 }),
       crouchLight: M({ name: 'lowJab', clip: 'crouchAttack', animFrom: 0, animFrames: 12, dur: 18, startup: 5, active: 3, dmg: 28, hb: { x: 20, w: 125, y: 50, h: 90 }, hitstun: 15 }),
       crouchKick: M({ name: 'lowRush', clip: 'crouchAttack', dur: 34, startup: 8, active: 5, dmg: 52, hb: { x: 20, w: 160, y: 0, h: 80 }, low: true, knockdown: true, hitstun: 22, blockstun: 12, push: 3, meter: 8, hitstop: 7 }),
       air: M({ name: 'airPunch', clip: 'punchR', dur: 24, startup: 4, active: 10, dmg: 46, hb: { x: 0, w: 130, y: 60, h: 120 }, hitstun: 18, hitstop: 6 }),
-      // S+U: throw a milk carton
-      special2: M({ name: 'milkThrow', clip: 'milkThrow', dur: 36, startup: 999, active: 0, cooldown: 50,
-        spawn: { at: 14, kind: 'milk', vx: 10.5, vy: -7, gravity: 0.34, dmg: 62, hitstun: 22, x: 50, y: 210 } }),
-      // U: scooter ram, briefly invulnerable at the start (same as the original)
-      special: M({ name: 'scooter', clip: 'scooter', animFrom: 30, animFrames: 70, dur: 66, startup: 8, active: 46, dmg: 20, hits: 5, gap: 9, invuln: 14,
-        hb: { x: 0, w: 170, y: 20, h: 170 }, hitstun: 20, blockstun: 10, push: 2, lunge: 11, lungeUntil: 54, meter: 4, hitstop: 4, finalKnockdown: true, afterimage: true }),
+      // U: 翘头撞击 — scripted in Fighter.updateScooterCrash (long charge, wheelie burst, ramming every 4 frames)
+      special: M({ name: 'wheelieCrash', kind: 'scooterCrash', clip: 'scooter', dur: 176, startup: 7, active: 140, cooldown: 120, invuln: 26,
+        dashSpeed: 15, chargeSpeed: 18, cruiseSpeed: 12, wheelieAt: 70, hitGap: 4,
+        hb: { x: 0, w: 198, y: 20, h: 170 }, dmg: 9, hitstun: 10, blockstun: 6, push: 2.8, hitstop: 1, meter: 1, afterimage: true }),
+      // → + J: throw a milk carton; → + K: long-arm glove (costs 35)
+      dashLight: M({ name: 'dashMilk', clip: 'milkThrow', dur: 26, startup: 999, active: 0, cooldown: 18, lunge: 1.6, lungeUntil: 8,
+        spawn: { at: 14, kind: 'milk', vx: 12, vy: -5.4, gravity: 0.34, dmg: 82, hitstun: 22, x: 50, y: 210 } }),
+      dashHeavy: M({ name: 'longArm', clip: 'dashPunch', dur: 32, startup: 8, active: 6, cost: 35, cooldown: 48, dmg: 138, hb: { x: 40, w: 290, y: 128, h: 112 },
+        hitstun: 28, blockstun: 14, push: 8, lunge: 2, hitstop: 12, meter: 8 }),
       super: M({
         // motorcycle rampage: guns the scooter across the screen, ramming repeatedly, wheelie launch at the end
         name: 'expressRampage', clip: 'scooter', animFrom: 18, animFrames: 92, dur: 128, startup: 8, active: 104, freeze: 40,
@@ -241,11 +254,9 @@ export const CHARACTERS = {
       crouchLight: M({ name: 'lowPeck', clip: 'atk5', dur: 18, startup: 5, active: 3, dmg: 28, hb: { x: 20, w: 120, y: 40, h: 90 }, hitstun: 15 }),
       crouchKick: M({ name: 'lowDribble', clip: 'atk6', dur: 34, startup: 8, active: 5, dmg: 52, hb: { x: 20, w: 165, y: 0, h: 70 }, low: true, knockdown: true, hitstun: 22, blockstun: 12, push: 3, meter: 8, hitstop: 7 }),
       air: M({ name: 'airPress', clip: 'atk4', animFrom: 3, animFrames: 6, dur: 24, startup: 4, active: 10, dmg: 48, hb: { x: 0, w: 140, y: 30, h: 130 }, hitstun: 18, hitstop: 6 }),
-      // U: send a rooster running along the floor
-      special: M({ name: 'rooster', clip: 'atk2', dur: 34, startup: 999, active: 0, cooldown: 55,
-        spawn: { at: 10, kind: 'chicken', vx: 7.5, vy: 0, gravity: 0, dmg: 58, hitstun: 22, x: 70, y: 52 } }),
-      // S+U: dribble dash, three hits
-      special2: M({ name: 'fastBreak', clip: 'run', dur: 52, startup: 6, active: 38, dmg: 26, hits: 3, gap: 11, hb: { x: 0, w: 160, y: 40, h: 170 }, hitstun: 20, blockstun: 10, push: 2, lunge: 8.5, lungeUntil: 42, meter: 4, hitstop: 5, finalKnockdown: true, afterimage: true }),
+      // U: 鸡影三重奏 — scripted in Fighter.updateChickShadow (clone behind the opponent, three unblockable pincer hits, launch)
+      special: M({ name: 'shadowTriple', kind: 'chickShadow', clip: 'atk2', dur: 116, startup: 999, active: 0, cooldown: 150,
+        chargeAt: [10, 42, 74], hitAt: [28, 60, 92], dmgs: [110, 135, 165] }),
       super: M({
         // scripted sequence (see Fighter.updateChickSuper): teleport, ball from the sky stuns,
         // meditate, dribble, then a 36-hit accelerating ball rally pinning the opponent
@@ -267,6 +278,8 @@ for (const c of Object.values(CHARACTERS)) {
 
 export const PROJECTILES = {
   orb: { char: 'naiwa', clip: 'orb', w: 70, h: 70, drawOffset: 50, glow: 'rgba(255,240,120,.55)' },
+  orbSmall: { char: 'naiwa', clip: 'orb', w: 58, h: 58, drawOffset: 50, drawScale: 0.82, glow: 'rgba(255,240,120,.45)' },
+  orbBig: { char: 'naiwa', clip: 'orb', w: 150, h: 150, drawOffset: 50, drawScale: 2.1, glow: 'rgba(255,240,120,.7)' },
   milk: { image: 'milk', w: 54, h: 60, drawW: 62, drawH: 74, spin: 0.22 },
   chicken: { char: 'chick', clip: 'chicken', w: 90, h: 80, drawOffset: 52 },
   ball: { draw: 'ball', r: 24, w: 48, h: 48, bounce: 3, spin: 0.25 }

@@ -107,7 +107,7 @@ export class Match {
   serialize() {
     const F = ['x', 'y', 'vx', 'vy', 'facing', 'hp', 'redHp', 'meter', 'state', 't', 'moveKey', 'step', 'mt', 'stun',
       'knockdown', 'kdT', 'invuln', 'flash', 'wins', 'dashDir', 'walkDir', 'comboTaken', 'comboDmg', 'airborne',
-      'hitsDone', 'lastHitAt', 'trail', 'stats', 'cs', 'hidden', 'meterLock'];
+      'hitsDone', 'lastHitAt', 'trail', 'stats', 'cs', 'hidden', 'meterLock', 'sp'];
     return {
       c: this.clock, ph: this.phase, pt: this.phaseT, r: this.round, tm: this.timer === Infinity ? -1 : this.timer,
       hs: this.hitstop, fz: this.freeze, fw: this.freezeWho ? this.freezeWho.side : -1, sn: this.superName,
@@ -404,7 +404,7 @@ export class Match {
     const base = Math.max(0.6, Math.min(2.8, (d.meter || 7) * 0.28)) * 8.4;
     let gain = blocked ? base * 0.25 : base;
     if (att.meterLock > 0 || att.moveKey === 'super') gain = 0;
-    else if (att.moveKey === 'special' || att.moveKey === 'special2') {
+    else if (att.moveKey === 'special') {
       gain = Math.min(gain, Math.max(0, 3 - att.actionMeter));
       att.actionMeter += gain;
     }
@@ -606,6 +606,10 @@ export class Match {
     if (f.state === 'getup' && this.clock % 4 < 2) alpha = 0.6;
     if (f.state === 'attack' && f.move?.invuln && f.invuln > 0) filter = 'drop-shadow(0 0 14px rgba(255,220,120,.95))';
     const jolt = this.hitstop > 0 && f.flash > 0 ? (Math.random() - 0.5) * 9 : 0;
+    // 鸡影三重奏: the clone standing behind the opponent
+    if (f.sp?.clone && f.move?.kind === 'chickShadow') {
+      drawClip(ctx, clip, a.frame, f.sp.clone.x, GROUND, f.sp.clone.facing, { alpha: 0.75, filter: 'sepia(.6) saturate(2.2) brightness(1.25) hue-rotate(-10deg)', state: f.state });
+    }
     // 篮球轮回 shadow clones trailing behind
     if (f.cs?.shadow) {
       for (const k of [2, 1]) {
@@ -680,14 +684,19 @@ export class Match {
     if (p.info.glow) {
       ctx.save();
       ctx.globalCompositeOperation = 'lighter';
-      const g = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, 60);
+      const gr = 60 * (p.info.drawScale || 1);
+      const g = ctx.createRadialGradient(p.x, p.y, 4, p.x, p.y, gr);
       g.addColorStop(0, p.info.glow); g.addColorStop(1, 'rgba(255,200,60,0)');
-      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, 60, 0, Math.PI * 2); ctx.fill();
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(p.x, p.y, gr, 0, Math.PI * 2); ctx.fill();
       ctx.restore();
     }
     if (p.info.clip) {
       const clip = CHARACTERS[p.info.char].clips[p.info.clip];
+      const sc = p.info.drawScale || 1;
+      ctx.save();
+      if (sc !== 1) { ctx.translate(p.x, p.y); ctx.scale(sc, sc); ctx.translate(-p.x, -p.y); }
       drawClip(ctx, clip, Math.floor(p.t * clip.fps / 60) % clip.frames, p.x, p.y + p.info.drawOffset, Math.sign(p.vx), { scale: 1.05 });
+      ctx.restore();
     } else if (p.info.draw === 'ball') {
       drawBall(ctx, p.x, p.y, p.info.r, p.spin);
     } else {

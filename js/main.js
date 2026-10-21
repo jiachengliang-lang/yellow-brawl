@@ -633,14 +633,14 @@ function pause() {
 /* ------------------------------------------------------------ controls */
 const MOVE_LISTS = {
   zh: {
-    naiwa: [['J ×4', '刺拳 → 刺拳 → 膝撞 → 连环拳'], ['K ×2', '重拳 → 肚皮顶飞'], ['L', '蛙腿横踢'], ['S + J / S + L', '蹲拳 / 扫堂腿（下段）'], ['U', '肚皮冲撞（击倒）'], ['S + U', '旋风拳（多段）'], ['I', '超必杀：笑脸连珠']],
-    kangaroo: [['J ×4', '直拳 → 直拳 → 一二拳 → 拳套连打'], ['K ×2', '重拳 → 上勾击倒'], ['L', '长臂拳套（超远）'], ['S + J / S + L', '低段刺拳 / 低段连打（下段）'], ['U', '电动车冲撞（起手无敌）'], ['S + U', '扔牛奶（抛物线飞行道具）'], ['I', '超必杀：超级配送（骑电动车横冲直撞）']],
-    chick: [['J ×4', '啄击 → 横甩 → 点指 → 旋转五连'], ['K ×2', '运球撞 → 跳压击倒'], ['L', '歌声音波（远距离两段）'], ['S + J / S + L', '蹲啄 / 低位运球（下段）'], ['U', '公鸡冲锋（地面飞行道具）'], ['S + U', '快攻运球（三段）'], ['I', '超必杀：篮球轮回（闪现、天降篮球、连环顶球）']]
+    naiwa: [['J ×4', '刺拳 → 刺拳 → 膝撞 → 连环拳'], ['K ×2', '重拳 → 肚皮顶飞'], ['L', '蛙腿横踢'], ['S + J / S + L', '蹲拳 / 扫堂腿（下段）'], ['→ + J', '冲刺笑球（飞行道具）'], ['→ + K', '肚皮巨球（耗 35 能量）'], ['U', '肚皮旋风顶（顶飞 → 弹回 → 旋风拳 → 顶飞）'], ['I', '超必杀：笑脸连珠']],
+    kangaroo: [['J ×4', '直拳 → 直拳 → 一二拳 → 拳套连打'], ['K ×2', '重拳 → 上勾击倒'], ['L', '低段快拳'], ['S + J / S + L', '低段刺拳 / 低段连打（下段）'], ['→ + J', '冲刺丢牛奶'], ['→ + K', '长臂拳套（耗 35 能量）'], ['U', '翘头撞击（电动车冲锋，起手无敌）'], ['I', '超必杀：超级配送（骑电动车横冲直撞）']],
+    chick: [['J ×4', '鸡啄 → 横甩 → 点指 → 鸡影五连'], ['K ×2', '运球撞 → 跳压击倒'], ['L', '歌声音波（远距离两段）'], ['S + J / S + L', '蹲啄 / 低位运球（下段）'], ['U', '鸡影三重奏（分身前后夹击，不可防御）'], ['I', '超必杀：篮球轮回（闪现、天降篮球、连环顶球）']]
   },
   en: {
-    naiwa: [['J ×4', 'Jab → jab → knee → flurry'], ['K ×2', 'Heavy punch → belly launcher'], ['L', 'Frog kick'], ['S + J / S + L', 'Low punch / sweep (low)'], ['U', 'Belly charge (knockdown)'], ['S + U', 'Whirlwind punches (multi-hit)'], ['I', 'Super: Grin Barrage']],
-    kangaroo: [['J ×4', 'Jab → jab → one-two → glove rush'], ['K ×2', 'Heavy → uppercut knockdown'], ['L', 'Long-arm glove (huge reach)'], ['S + J / S + L', 'Low jab / low rush (low)'], ['U', 'Scooter ram (invincible start)'], ['S + U', 'Milk carton throw (arcing projectile)'], ['I', 'Super: Express Rampage (scooter rampage)']],
-    chick: [['J ×4', 'Peck → swing → dab → shadow five'], ['K ×2', 'Dribble ram → jumping press'], ['L', 'Sound wave (long, 2 hits)'], ['S + J / S + L', 'Low peck / low dribble (low)'], ['U', 'Rooster run (ground projectile)'], ['S + U', 'Fast break dribble (3 hits)'], ['I', 'Super: Basketball Samsara (teleport, sky ball, 36-hit rally)']]
+    naiwa: [['J ×4', 'Jab → jab → knee → flurry'], ['K ×2', 'Heavy punch → belly launcher'], ['L', 'Frog kick'], ['S + J / S + L', 'Low punch / sweep (low)'], ['→ + J', 'Dash laughing orb (projectile)'], ['→ + K', 'Giant belly orb (costs 35)'], ['U', 'Belly Cyclone (bump → bounce → whirlwind → launcher)'], ['I', 'Super: Grin Barrage']],
+    kangaroo: [['J ×4', 'Jab → jab → one-two → glove rush'], ['K ×2', 'Heavy → uppercut knockdown'], ['L', 'Quick low punch'], ['S + J / S + L', 'Low jab / low rush (low)'], ['→ + J', 'Dash milk throw'], ['→ + K', 'Long-arm glove (costs 35)'], ['U', 'Wheelie Crash (scooter charge, invincible start)'], ['I', 'Super: Express Rampage (scooter rampage)']],
+    chick: [['J ×4', 'Peck → swing → dab → shadow five'], ['K ×2', 'Dribble ram → jumping press'], ['L', 'Sound wave (long, 2 hits)'], ['S + J / S + L', 'Low peck / low dribble (low)'], ['U', 'Shadow Triple (clone pincer, unblockable)'], ['I', 'Super: Basketball Samsara (teleport, sky ball, 36-hit rally)']]
   }
 };
 
@@ -664,6 +664,7 @@ function showControls(back = showMenu) {
             ${row(t('ctrlLight'), k('J'), k('1'))}
             ${row(t('ctrlHeavy'), k('K'), k('2'))}
             ${row(t('ctrlKick'), k('L'), k('3'))}
+            ${row(t('ctrlDashAtk'), k('→') + '+' + k('J') + ' / ' + k('K'), k('←') + '+' + k('1') + ' / ' + k('2'))}
             ${row(t('ctrlSpecial'), k('U'), k('4'))}
             ${row(t('ctrlSuper'), k('I'), k('5'))}
             ${row(t('ctrlGuard'), k('Shift'), k('R-Shift') + k('0'))}

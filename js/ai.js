@@ -87,10 +87,10 @@ export class CpuController {
   decide(self, opp, fwd, back) {
     const d = Math.abs(opp.x - self.x);
     const p = this.p;
-    // which special (if any) throws a projectile: U, or down + U
-    const projKey = self.c.moves.special.spawn ? 'special' : self.c.moves.special2.spawn ? 'special2' : null;
-    const zoner = !!projKey;
-    const shoot = () => this.tap({ special: true, down: projKey === 'special2' });
+    // fighters with a projectile dash attack (forward + J) can zone from range
+    const zoner = !!self.c.moves.dashLight?.spawn;
+    const shoot = () => this.tap({ [fwd]: true, light: true });
+    const dashHeavy = () => this.tap({ [fwd]: true, heavy: true });
 
     if (opp.state === 'down' || opp.state === 'getup') {
       if (d > 260) this.hold({ [fwd]: true }, rand(10, 20));
@@ -118,7 +118,8 @@ export class CpuController {
       const r = Math.random();
       if (r < 0.25) this.tap({ kick: true });
       else if (r < 0.37) { this.hold({ down: true }, 2); this.tap({ down: true, kick: true }); }
-      else if (r < 0.45) this.tap({ down: true, special: true });
+      else if (r < 0.45 && self.c.moves.dashHeavy && self.meter >= 35) dashHeavy();
+      else if (r < 0.5) this.tap({ special: true });
       else if (r < 0.55 && chance(p.aggr)) { this.hold({ up: true, [fwd]: true }, 3); this.idle(16); this.tap({ kick: true }); }
       else this.hold({ [fwd]: true }, rand(8, 18));
       return;
