@@ -107,7 +107,7 @@ export class Match {
   serialize() {
     const F = ['x', 'y', 'vx', 'vy', 'facing', 'hp', 'redHp', 'meter', 'state', 't', 'moveKey', 'step', 'mt', 'stun',
       'knockdown', 'kdT', 'invuln', 'flash', 'wins', 'dashDir', 'walkDir', 'comboTaken', 'comboDmg', 'airborne',
-      'hitsDone', 'lastHitAt', 'trail', 'stats', 'cs', 'hidden'];
+      'hitsDone', 'lastHitAt', 'trail', 'stats', 'cs', 'hidden', 'meterLock'];
     return {
       c: this.clock, ph: this.phase, pt: this.phaseT, r: this.round, tm: this.timer === Infinity ? -1 : this.timer,
       hs: this.hitstop, fz: this.freeze, fw: this.freezeWho ? this.freezeWho.side : -1, sn: this.superName,
@@ -370,11 +370,11 @@ export class Match {
       att.stats.hits++;
       att.stats.maxCombo = Math.max(att.stats.maxCombo, def.comboTaken);
     }
+    this.grantMeter(att, def, d, res === 'block');
     if (res === 'block') {
       this.fx.blockSpark(px, py, dir);
       sfx('block');
       this.hitstop = Math.max(this.hitstop, 4);
-      att.meter = Math.min(100, att.meter + d.meter * 0.5);
     } else {
       att.connected = true;
       const heavy = d.dmg >= 60 || d.knockdown || (opts.final && d.finalKnockdown);
@@ -387,7 +387,6 @@ export class Match {
       this.shakeBias = dir * (heavy ? 14 : 6);
       if (counter && res === 'hit') this.fx.float(px, py - 70, 'COUNTER', '#ff8a3d');
       if (d.knockdown || (opts.final && d.finalKnockdown)) this.screenFlash = Math.max(this.screenFlash, 3);
-      att.meter = Math.min(100, att.meter + d.meter * 0.7);
       this.combo[att.side] = { hits: def.comboTaken, dmg: def.comboDmg, t: 100, pop: 8 };
     }
     // pinned against the wall: the attacker gets pushed back instead
@@ -395,6 +394,23 @@ export class Match {
       att.vx = -dir * d.push * 0.8;
     }
     if (res === 'ko') this.onKO(att.side);
+  }
+
+  /* Meter, as in the original: each hit grants clamp(move.meter × 0.28, 0.6, 2.8) × 8.4
+   * (a quarter on block); specials/ultimates can earn at most 3 per move; nothing while
+   * locked after an ultimate; the defender gets half of what the attacker gained. */
+  grantMeter(att, def, d, blocked) {
+    if (this.training) return;
+    const base = Math.max(0.6, Math.min(2.8, (d.meter || 7) * 0.28)) * 8.4;
+    let gain = blocked ? base * 0.25 : base;
+    if (att.meterLock > 0 || att.moveKey === 'super') gain = 0;
+    else if (att.moveKey === 'special' || att.moveKey === 'special2') {
+      gain = Math.min(gain, Math.max(0, 3 - att.actionMeter));
+      att.actionMeter += gain;
+    }
+    if (gain <= 0) return;
+    att.meter = Math.min(100, att.meter + gain);
+    def.meter = Math.min(100, def.meter + gain * 0.5);
   }
 
   /* ------------------------------------------------------------ projectiles */

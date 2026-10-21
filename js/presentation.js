@@ -361,7 +361,8 @@ function drawPlayerHud(ctx, m, f, side) {
   const full = f.meter >= 100;
   ctx.font = `900 13px ${MONO}`; ctx.textAlign = left ? 'left' : 'right';
   ctx.fillStyle = full ? '#7ff3ff' : 'rgba(255,246,220,.65)';
-  ctx.fillText(full ? `${t('superReady')} ◆` : `SUPER  ${Math.floor(f.meter)}%`, left ? mx : mx + mw, my - 8);
+  const locked = f.meterLock > 0;
+  ctx.fillText(full ? `${t('superReady')} ◆` : locked ? `SUPER  ⏸ ${Math.ceil(f.meterLock / 60)}s` : `SUPER  ${Math.floor(f.meter)}%${f.meter >= 50 ? '  · SP ✓' : ''}`, left ? mx : mx + mw, my - 8);
   for (let s = 0; s < 4; s++) {
     const sw = (mw - 9) / 4, sx = mx + s * (sw + 3);
     rr(ctx, sx, my, sw, mh, 3); ctx.fillStyle = 'rgba(7,5,9,.75)'; ctx.fill();
@@ -374,6 +375,9 @@ function drawPlayerHud(ctx, m, f, side) {
       rr(ctx, fx, my, fw, mh, 3); ctx.fillStyle = gg; ctx.fill();
     }
   }
+  // the half-bar mark: a special costs this much
+  ctx.fillStyle = f.meter >= 50 ? '#ffd23f' : 'rgba(255,210,63,.45)';
+  ctx.fillRect(mx + mw / 2 - 1.5, my - 4, 3, mh + 8);
   if (full) {
     // sheen sweeping across a full meter
     const k = (m.clock % 50) / 50;

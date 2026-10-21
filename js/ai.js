@@ -44,6 +44,8 @@ export class CpuController {
       Object.assign(out, step.inp);
       if (--step.frames <= 0) this.queue.shift();
     }
+    // specials cost half a bar outside training: don't press them without the meter
+    if (out.special && !match.training && self.meter < 50) out.special = false;
     // hit-confirm: cancel a connected normal into a special
     if (self.state === 'attack' && self.connected && !this.cancelled && chance(this.p.cancel * 0.12)) {
       this.queue = [];

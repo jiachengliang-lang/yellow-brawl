@@ -72,7 +72,7 @@ const STRINGS = {
   ctrlLight: { zh: '轻拳（连按出连段）', en: 'Light (tap for a combo string)' },
   ctrlHeavy: { zh: '重拳（连按两次）', en: 'Heavy (tap twice)' },
   ctrlKick: { zh: '踢 / 长距离技', en: 'Kick / long-range move' },
-  ctrlSpecial: { zh: '必杀技（下+必杀 = 第二必杀）', en: 'Special (down + special = 2nd special)' },
+  ctrlSpecial: { zh: '必杀技（消耗半条能量；下+必杀 = 第二必杀）', en: 'Special (costs half a bar; down + special = 2nd special)' },
   ctrlSuper: { zh: '超必杀（能量满）', en: 'Super (full meter)' },
   ctrlGuard: { zh: '防御（不按方向也能挡）', en: 'Guard (block without holding back)' },
   ctrlPause: { zh: '暂停', en: 'Pause' },

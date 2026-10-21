@@ -17,6 +17,8 @@ const DASH_WINDOW = 12;     // max frames between taps for a dash
 const DASH_FRAMES = 18;
 const BACKDASH_FRAMES = 16;
 const NEUTRAL = new Set(['idle', 'walk', 'crouch', 'guard']);
+export const SPECIAL_METER_COST = 50;   // U / down+U cost half a bar, like the original
+const SUPER_METER_LOCK = 180;          // after an ultimate the meter stays locked for 3 s
 const ATTACK_BUTTONS = ['light', 'heavy', 'kick', 'special', 'super'];
 
 export class Fighter {
@@ -50,6 +52,8 @@ export class Fighter {
     this.tapped = null;
     this.trail = [];
     this.stats = this.stats || { dealt: 0, hits: 0, maxCombo: 0, blocks: 0, supers: 0 };
+    this.meterLock = 0;
+    this.actionMeter = 0;
   }
 
   get grounded() { return this.y >= GROUND && this.vy >= 0; }
@@ -88,6 +92,7 @@ export class Fighter {
     this.age++;
     this.recordTrail();
     if (this.invuln > 0) this.invuln--;
+    if (this.meterLock > 0) this.meterLock--;
     if (this.flash > 0) this.flash--;
     for (const k in this.cooldowns) if (this.cooldowns[k] > 0) this.cooldowns[k]--;
     if (this.redHp > this.hp) this.redHp = Math.max(this.hp, this.redHp - (this.state === 'hurt' ? 0 : 6));
@@ -130,6 +135,7 @@ export class Fighter {
   }
 
   toNeutral() {
+    if (this.moveKey === 'super') { this.meter = Math.min(this.meter, 3); this.meterLock = SUPER_METER_LOCK; }
     this.move = null; this.moveKey = null; this.queued = null;
     this.hidden = false; this.cs = null;
     this.knockdown = false;
@@ -152,7 +158,7 @@ export class Fighter {
     if (this.pressed('super') && this.meter >= 100) { this.consume('super'); return this.startMove(mv.super, 'super', 0, match); }
     if (this.pressed('special')) {
       const key = inp.down ? 'special2' : 'special';
-      if (!(this.cooldowns[key] > 0)) { this.consume('special'); return this.startMove(mv[key], key, 0, match); }
+      if (!(this.cooldowns[key] > 0) && this.paySpecial(match)) { this.consume('special'); return this.startMove(mv[key], key, 0, match); }
     }
     if (this.pressed('light') || this.pressed('heavy') || this.pressed('kick')) {
       const b = this.pressed('light') ? 'light' : this.pressed('heavy') ? 'heavy' : 'kick';
@@ -245,11 +251,20 @@ export class Fighter {
     this.toNeutral();
   }
 
+  /* Specials spend half a bar; returns false when there isn't enough meter. */
+  paySpecial(match) {
+    if (match.training) return true;
+    if (this.meter < SPECIAL_METER_COST) return false;
+    this.meter -= SPECIAL_METER_COST;
+    return true;
+  }
+
   /* --------------------------------------------------------------- attacks */
   startMove(def, key, step, match, airborne = false) {
     this.move = def; this.moveKey = key; this.step = step;
     this.mt = 0; this.queued = null; this.connected = false;
     this.hitsDone = 0; this.lastHitAt = -999; this.barrageIdx = 0;
+    this.actionMeter = 0;
     this.airborne = airborne;
     this.setState('attack');
     if (!airborne) this.vx = 0;
@@ -304,7 +319,7 @@ export class Fighter {
       if (this.pressed('super') && this.meter >= 100) { this.consume('super'); return this.startMove(this.c.moves.super, 'super', 0, match); }
       if (this.pressed('special')) {
         const key = this.in.down ? 'special2' : 'special';
-        if (!(this.cooldowns[key] > 0)) { this.consume('special'); return this.startMove(this.c.moves[key], key, 0, match); }
+        if (!(this.cooldowns[key] > 0) && this.paySpecial(match)) { this.consume('special'); return this.startMove(this.c.moves[key], key, 0, match); }
       }
     }
     if (this.queued && this.mt >= activeEnd) {
@@ -512,7 +527,6 @@ export class Fighter {
       this.vx = dir * d.push * 0.9;
       const chip = opts.projectile || d.freeze != null ? Math.round(d.dmg * 0.12) : 0;
       this.hp = Math.max(1, this.hp - chip);
-      this.meter = Math.min(100, this.meter + 2);
       return 'block';
     }
     const scale = opts.noScale ? 1 : Math.max(0.4, 1 - 0.06 * this.comboTaken);
@@ -520,7 +534,6 @@ export class Fighter {
     this.hp = Math.max(opts.noKo ? 1 : 0, this.hp - dmg);
     this.comboTaken++;
     this.comboDmg += dmg;
-    this.meter = Math.min(100, this.meter + dmg * 0.035);
     this.flash = 6;
     this.move = null; this.queued = null;
 
